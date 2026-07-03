@@ -1,0 +1,23 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# environment & secrets
+.env
+
+# OSMnx HTTP response cache (large, regenerable)
+data/osmnx_cache/
+
+# NOTE: data/cache/ is intentionally tracked -- it holds the pinned
+# precomputed demo results needed for offline presentations.
+
+# editor/os noise
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# claude code local state
+.claude/settings.local.json
