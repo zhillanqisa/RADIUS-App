@@ -29,6 +29,7 @@ Catatan implementasi (perubahan dari versi awal):
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 import random
@@ -40,6 +41,7 @@ import geopandas as gpd
 import networkx as nx
 import osmnx as ox
 import pandas as pd
+import requests
 from shapely.geometry import LineString, Point
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
@@ -53,6 +55,16 @@ try:  # OSMnx raises this when a query legitimately returns no elements.
 except ImportError:  # pragma: no cover - API-location fallback
     class InsufficientResponseError(Exception):
         ...
+
+try:  # Raised by OSMnx on HTTP-level failures (rate limits, 5xx).
+    from osmnx._errors import ResponseStatusCodeError
+except ImportError:  # pragma: no cover - API-location fallback
+    class ResponseStatusCodeError(Exception):
+        ...
+
+# Only genuinely transient failures are worth retrying; programming
+# errors must propagate immediately instead of burning the backoff budget.
+_RETRYABLE_ERRORS = (requests.RequestException, ResponseStatusCodeError, OSError)
 
 # OSMnx's own HTTP cache: repeated Overpass queries are served from disk.
 ox.settings.use_cache = True
@@ -127,7 +139,7 @@ def _with_retries(fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
             return fn(*args, **kwargs)
         except InsufficientResponseError:
             raise
-        except Exception as exc:  # network/HTTP/rate-limit errors
+        except _RETRYABLE_ERRORS as exc:  # network/HTTP/rate-limit errors
             last_exc = exc
             wait = settings.overpass_backoff_s * (2 ** (attempt - 1))
             logger.warning(
@@ -276,9 +288,11 @@ def fetch_pois(
 
     gdf = gdf.to_crs(epsg=4326)
     # representative_point selalu berada di dalam geometri dan tidak
-    # memicu peringatan centroid-in-geographic-CRS.
+    # memicu peringatan centroid-in-geographic-CRS. covered_by (bukan
+    # contains) supaya titik tepat di tepi isochrone tetap terhitung,
+    # dan tervektorisasi (bukan loop Python per baris).
     points = gdf.geometry.representative_point()
-    gdf = gdf[points.apply(isochrone_poly.contains)]
+    gdf = gdf[points.covered_by(isochrone_poly)]
 
     results: dict[str, gpd.GeoDataFrame] = {}
     for category, tags in CATEGORY_TAGS.items():
@@ -375,7 +389,10 @@ def generate_demo_data(lat: float, lon: float, minutes: int = 15) -> RadiusResul
     lokasi berbeda menghasilkan profil berbeda tapi hasil yang sama
     setiap kali dipanggil.
     """
-    seed = hash((round(lat, 4), round(lon, 4), minutes)) & 0xFFFFFFFF
+    # Seed dari sha256, bukan hash() builtin: stabil lintas versi Python
+    # dan lintas proses. Bukan untuk keperluan kriptografis.
+    key = f"{round(lat, 4)}_{round(lon, 4)}_{minutes}".encode()
+    seed = int.from_bytes(hashlib.sha256(key).digest()[:4], "big")
     rng = random.Random(seed)
 
     buffer_deg = (minutes * WALK_SPEED_KMH * 1000 / 60) / 111_000

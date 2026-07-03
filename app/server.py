@@ -50,7 +50,7 @@ def client_config() -> dict[str, object]:
 def analyze(
     lat: float = Query(..., ge=-90.0, le=90.0),
     lon: float = Query(..., ge=-180.0, le=180.0),
-    minutes: int = Query(default=None),
+    minutes: int | None = Query(default=None),
 ) -> dict[str, object]:
     """Full walkability analysis for one point.
 
@@ -74,6 +74,12 @@ def geocode(q: str = Query(..., min_length=2, max_length=200)) -> dict[str, obje
         return {"results": search(q)}
     except GeocodeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/{rest:path}", include_in_schema=False)
+def api_not_found(rest: str) -> None:
+    """Unmatched /api/* paths get a JSON 404 instead of the static mount."""
+    raise HTTPException(status_code=404, detail=f"Endpoint /api/{rest} tidak ada.")
 
 
 # Mounted last so /api/* routes take precedence.

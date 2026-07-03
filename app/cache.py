@@ -66,7 +66,8 @@ def put(
         "payload": payload,
     }
     try:
+        text = json.dumps(entry, ensure_ascii=False)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(entry, ensure_ascii=False), encoding="utf-8")
-    except OSError as exc:
+        path.write_text(text, encoding="utf-8")
+    except (TypeError, ValueError, OSError) as exc:
         logger.error("Failed to write cache entry %s: %s", path.name, exc)

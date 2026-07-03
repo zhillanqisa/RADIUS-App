@@ -56,6 +56,8 @@ def search(query: str, limit: int = 6) -> list[dict[str, Any]]:
                     "lon": float(item["lon"]),
                 }
             )
-        except (KeyError, TypeError, ValueError):
-            continue  # skip malformed rows rather than failing the search
+        except (KeyError, TypeError, ValueError) as exc:
+            # skip malformed rows rather than failing the search
+            logger.warning("Skipping malformed Nominatim row: %s", exc)
+            continue
     return results

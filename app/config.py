@@ -6,6 +6,7 @@ codebase should hardcode these numbers.
 """
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,6 +21,9 @@ def _env_float(name: str, default: float) -> float:
     try:
         return float(os.environ.get(name, default))
     except ValueError:
+        logging.getLogger("radius.config").warning(
+            "Env var %s is not a valid float; using default %s", name, default
+        )
         return default
 
 
@@ -27,6 +31,9 @@ def _env_int(name: str, default: int) -> int:
     try:
         return int(os.environ.get(name, default))
     except ValueError:
+        logging.getLogger("radius.config").warning(
+            "Env var %s is not a valid int; using default %s", name, default
+        )
         return default
 
 
