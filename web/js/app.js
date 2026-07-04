@@ -1,5 +1,6 @@
-/* RADIUS frontend: Leaflet map + analysis panel.
-   Vanilla JS, no build step. Talks only to the same-origin API. */
+/* RADIUS frontend v2 "Peta Utama": Leaflet map penuh + panel verdict mengambang
+   + dock durasi dengan skor per durasi. Vanilla JS, tanpa build step.
+   Kontrak API tidak berubah: /api/config, /api/geocode, /api/analyze. */
 "use strict";
 
 const CATEGORY_META = {
@@ -18,7 +19,9 @@ const SCORE_BANDS = [
   { min: 0, label: "Bergantung kendaraan", cssVar: "--band-low" },
 ];
 
-const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+const DURATIONS = [5, 10, 15, 20];
+
+const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const els = {
   searchInput: document.getElementById("search-input"),
@@ -31,12 +34,19 @@ const els = {
   resultView: document.getElementById("result-view"),
   noticeDemo: document.getElementById("notice-demo"),
   noticeDemoText: document.getElementById("notice-demo-text"),
-  ringValue: document.getElementById("ring-value"),
+  ringValue: document.getElementById("ring-value"),        // marker pada skala band
   scoreNum: document.getElementById("score-num"),
   scoreBand: document.getElementById("score-band"),
   scoreCaption: document.getElementById("score-caption"),
   scoreCached: document.getElementById("score-cached"),
+  verdictGap: document.getElementById("verdict-gap"),
+  breakdownTitle: document.getElementById("breakdown-title"),
   categoryList: document.getElementById("category-list"),
+};
+
+const EMPTY_DEFAULTS = {
+  title: els.stateEmpty.querySelector(".state-title").textContent,
+  body: els.stateEmpty.querySelector(".state-body").textContent,
 };
 
 const state = {
@@ -44,6 +54,8 @@ const state = {
   loading: false,
   center: null,
 };
+
+let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
 
 const cssVal = (name) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -76,45 +88,137 @@ function setCenterMarker(lat, lon) {
   }).addTo(map);
 }
 
-/* ---------- rendering ---------- */
+function isDesktop() {
+  return window.matchMedia("(min-width: 901px)").matches;
+}
+
+/* ---------- state panel ---------- */
 
 function showState(which) {
   els.stateEmpty.hidden = which !== "empty";
   els.stateLoading.hidden = which !== "loading";
   els.resultView.hidden = which !== "result";
+  if (which !== "result") els.resultView.classList.remove("enter");
+}
+
+function showError(title, body) {
+  els.stateEmpty.querySelector(".state-title").textContent = title;
+  els.stateEmpty.querySelector(".state-body").textContent = body;
+  els.stateEmpty.classList.add("is-error");
+  showState("empty");
+}
+
+function resetEmptyState() {
+  els.stateEmpty.querySelector(".state-title").textContent = EMPTY_DEFAULTS.title;
+  els.stateEmpty.querySelector(".state-body").textContent = EMPTY_DEFAULTS.body;
+  els.stateEmpty.classList.remove("is-error");
 }
 
 function bandFor(score) {
   return SCORE_BANDS.find((b) => score >= b.min) || SCORE_BANDS[SCORE_BANDS.length - 1];
 }
 
+/* ---------- dock durasi: skor per durasi ---------- */
+
+function setDurationScore(minutes, score) {
+  const btn = els.durationGroup.querySelector(`button[data-minutes="${minutes}"]`);
+  if (!btn) return;
+  const el = btn.querySelector(".d-score");
+  if (score == null) {
+    el.hidden = true;
+    el.textContent = "";
+  } else {
+    el.hidden = false;
+    el.textContent = `skor ${score}`;
+  }
+}
+
+function clearDurationScores() {
+  for (const m of DURATIONS) setDurationScore(m, null);
+}
+
+async function fetchOtherDurations(center) {
+  const token = ++compareToken;
+  for (const m of DURATIONS) {
+    if (m === state.minutes) continue;
+    try {
+      const url = `/api/analyze?lat=${center.lat.toFixed(6)}&lon=${center.lon.toFixed(6)}&minutes=${m}`;
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (token !== compareToken) return; // titik sudah berganti
+      if (data.source === "demo") continue; // jangan campur skor simulasi
+      setDurationScore(m, Math.round(data.score));
+    } catch (err) {
+      /* skor durasi lain bersifat opsional; abaikan kegagalan */
+    }
+  }
+}
+
+/* ---------- animasi skor ---------- */
+
+function animateScoreNum(target) {
+  if (REDUCED_MOTION) {
+    els.scoreNum.textContent = target;
+    return;
+  }
+  const start = performance.now();
+  const dur = 700;
+  function frame(now) {
+    const p = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    els.scoreNum.textContent = Math.round(target * eased);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- render hasil ---------- */
+
 function renderResult(data) {
+  const score = Math.round(data.score);
   const band = bandFor(data.score);
   const bandColor = cssVal(band.cssVar);
 
-  // score ring + numeral
-  els.ringValue.style.stroke = bandColor;
-  els.ringValue.style.strokeDashoffset =
-    RING_CIRCUMFERENCE * (1 - Math.max(0, Math.min(100, data.score)) / 100);
-  els.scoreNum.textContent = Math.round(data.score);
+  // verdict
+  els.scoreCaption.textContent = `Jangkauan ${data.minutes} menit jalan kaki dari titik terpilih`;
+  animateScoreNum(score);
   els.scoreBand.textContent = band.label;
   els.scoreBand.style.color = bandColor;
-  els.scoreCaption.textContent =
-    `Skor ${data.score} dari 100 dalam ${data.minutes} menit jalan kaki`;
+
+  const items = Object.entries(data.breakdown)
+    .filter(([key]) => CATEGORY_META[key])
+    .map(([key, item]) => ({ key, ...item }));
+  const missing = items.filter((i) => i.count === 0).length;
+  const thin = items.filter((i) => i.count === 1).length;
+  if (missing === 0 && thin === 0) {
+    els.verdictGap.textContent = "Semua kategori kebutuhan harian terjangkau.";
+  } else if (missing === 0) {
+    els.verdictGap.textContent = `Semua kategori ada, ${thin} di antaranya hanya 1 pilihan.`;
+  } else {
+    els.verdictGap.textContent = `${missing} dari ${items.length} kategori tidak terjangkau jalan kaki.`;
+  }
+
+  // marker pada skala band 0-100
+  els.ringValue.style.left = `${Math.max(0, Math.min(100, data.score))}%`;
+
   els.scoreCached.hidden = !(data.cached && data.source === "live");
 
-  // demo notice
+  // notice demo
   const isDemo = data.source === "demo";
   els.noticeDemo.hidden = !isDemo;
   if (isDemo) els.noticeDemoText.textContent = data.notice || "Menampilkan data simulasi.";
 
-  // category rows
+  // kategori: kesenjangan terbesar dulu (0 tempat, lalu 1 tempat, lalu lengkap; bobot besar dulu)
+  els.breakdownTitle.textContent = missing > 0 ? "Yang kurang dulu" : "Rincian per kategori";
+  items.sort((a, b) => (b.weight - b.score) - (a.weight - a.score) || b.weight - a.weight);
+
   els.categoryList.replaceChildren();
-  for (const [key, meta] of Object.entries(CATEGORY_META)) {
-    const item = data.breakdown[key];
-    if (!item) continue;
+  items.forEach((item, idx) => {
+    const meta = CATEGORY_META[item.key];
     const color = cssVal(meta.cssVar);
     const li = document.createElement("li");
+    li.style.setProperty("--i", idx);
     li.innerHTML = `
       <div class="cat-icon" style="background:${color}">
         <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#${meta.icon}"></use></svg>
@@ -123,26 +227,33 @@ function renderResult(data) {
         <span class="name"></span>
         <span class="count"></span>
       </div>
-      <div class="cat-pts"></div>
-      <div class="cat-bar"><i style="background:${color}"></i></div>`;
+      <span class="cat-status"></span>`;
     li.querySelector(".name").textContent = meta.label;
     li.querySelector(".count").textContent =
-      item.count === 0 ? "tidak ditemukan" : `${item.count} tempat terjangkau`;
-    li.querySelector(".cat-pts").textContent = `${item.score}/${item.weight}`;
+      item.count === 0
+        ? "tidak ditemukan dalam jangkauan"
+        : `${item.count} tempat terjangkau, nilai ${item.score}/${item.weight}`;
+    const status = li.querySelector(".cat-status");
+    if (item.count === 0) {
+      status.textContent = "Tidak terjangkau";
+      status.classList.add("is-bad");
+    } else if (item.count === 1) {
+      status.textContent = "Hanya 1 pilihan";
+      status.classList.add("is-warn");
+    } else {
+      status.textContent = "Ada pilihan";
+      status.classList.add("is-ok");
+    }
     els.categoryList.appendChild(li);
-    const fill = li.querySelector(".cat-bar i");
-    requestAnimationFrame(() => {
-      fill.style.width = `${(item.score / item.weight) * 100}%`;
-    });
-  }
+  });
 
-  // map layers
+  // layer peta
   isochroneLayer.clearLayers();
   poiLayer.clearLayers();
   const accent = cssVal("--accent");
   const iso = L.geoJSON(
     { type: "Feature", geometry: data.isochrone },
-    { style: { color: accent, weight: 2, fillColor: accent, fillOpacity: 0.13 } }
+    { style: { color: accent, weight: 2, fillColor: accent, fillOpacity: 0.13, className: "iso-shape" } }
   ).addTo(isochroneLayer);
 
   for (const poi of data.pois) {
@@ -167,8 +278,27 @@ function renderResult(data) {
   }
 
   setCenterMarker(data.center.lat, data.center.lon);
-  map.fitBounds(iso.getBounds(), { padding: [28, 28] });
+  if (isDesktop()) {
+    // beri ruang untuk panel kiri dan dock durasi atas
+    map.fitBounds(iso.getBounds(), {
+      paddingTopLeft: L.point(462, 84),
+      paddingBottomRight: L.point(40, 40),
+    });
+  } else {
+    map.fitBounds(iso.getBounds(), { padding: [26, 26] });
+  }
+
   showState("result");
+  if (!REDUCED_MOTION) {
+    els.resultView.classList.remove("enter");
+    void els.resultView.offsetWidth; // restart animasi masuk
+    els.resultView.classList.add("enter");
+  }
+
+  // dock: skor durasi aktif langsung, durasi lain menyusul di latar belakang.
+  // Saat fallback demo aktif, jangan memicu 3 percobaan Overpass tambahan.
+  setDurationScore(data.minutes, score);
+  if (!isDemo) fetchOtherDurations(state.center);
 }
 
 /* ---------- API ---------- */
@@ -176,6 +306,9 @@ function renderResult(data) {
 async function runAnalysis(lat, lon) {
   state.loading = true;
   state.center = { lat, lon };
+  compareToken++;            // batalkan update perbandingan durasi yang sedang berjalan
+  clearDurationScores();
+  resetEmptyState();
   setCenterMarker(lat, lon);
   showState("loading");
   try {
@@ -188,10 +321,10 @@ async function runAnalysis(lat, lon) {
     renderResult(await resp.json());
   } catch (err) {
     console.error("Analysis failed:", err);
-    showState("empty");
-    els.stateEmpty.querySelector(".state-title").textContent = "Analisis gagal";
-    els.stateEmpty.querySelector(".state-body").textContent =
-      "Tidak dapat terhubung ke server RADIUS. Pastikan server berjalan, lalu coba lagi.";
+    showError(
+      "Analisis gagal",
+      "Tidak dapat terhubung ke server RADIUS. Pastikan server berjalan, lalu coba lagi."
+    );
   } finally {
     state.loading = false;
   }
@@ -269,7 +402,7 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest(".search-block")) hideSearchResults();
 });
 
-/* ---------- controls ---------- */
+/* ---------- kontrol durasi ---------- */
 
 els.durationGroup.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-minutes]");
@@ -304,7 +437,7 @@ async function init() {
       els.demoChips.appendChild(btn);
     }
   } catch (err) {
-    // Config fetch failing means the API is down; map still works visually.
+    // Config gagal berarti API mati; peta tetap tampil.
     console.error("Config load failed:", err);
   }
 }

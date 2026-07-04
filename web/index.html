@@ -12,36 +12,52 @@
 <body>
 
 <div class="shell">
+
+  <main class="map-wrap">
+    <div id="map" aria-label="Peta interaktif"></div>
+
+    <div class="duration-dock">
+      <div class="segmented" role="radiogroup" aria-label="Durasi jalan kaki dan skor per durasi" id="duration-group">
+        <button type="button" role="radio" aria-checked="false" data-minutes="5">
+          <span class="d-min">5 mnt</span><span class="d-score" hidden></span>
+        </button>
+        <button type="button" role="radio" aria-checked="false" data-minutes="10">
+          <span class="d-min">10 mnt</span><span class="d-score" hidden></span>
+        </button>
+        <button type="button" role="radio" aria-checked="true" data-minutes="15">
+          <span class="d-min">15 mnt</span><span class="d-score" hidden></span>
+        </button>
+        <button type="button" role="radio" aria-checked="false" data-minutes="20">
+          <span class="d-min">20 mnt</span><span class="d-score" hidden></span>
+        </button>
+      </div>
+    </div>
+  </main>
+
   <aside class="panel" id="panel">
 
     <header class="brand">
-      <div class="brand-mark" aria-hidden="true"></div>
-      <div>
-        <h1 class="brand-name">RADIUS</h1>
-        <p class="brand-sub">Skor Kota 15 Menit</p>
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"><i></i></div>
+        <div class="brand-text">
+          <h1 class="brand-name">RADIUS</h1>
+          <p class="brand-sub">Skor Kota 15 Menit</p>
+        </div>
       </div>
+      <span class="brand-city">Bandung</span>
     </header>
 
     <section class="search-block" aria-label="Pencarian lokasi">
       <div class="search-field">
         <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#magnifying-glass"></use></svg>
-        <input id="search-input" type="search" placeholder="Cari alamat atau nama tempat" autocomplete="off"
+        <input id="search-input" type="search" placeholder="Cari alamat, atau klik titik di peta" autocomplete="off"
                aria-label="Cari alamat atau nama tempat" enterkeyhint="search">
       </div>
       <ul class="search-results" id="search-results" role="listbox" hidden></ul>
-      <p class="search-hint">atau klik langsung titik mana pun di peta</p>
       <p class="search-error" id="search-error" role="alert" hidden></p>
     </section>
 
-    <section class="controls" aria-label="Pengaturan analisis">
-      <p class="control-label" id="duration-label">Durasi jalan kaki</p>
-      <div class="segmented" role="radiogroup" aria-labelledby="duration-label" id="duration-group">
-        <button type="button" role="radio" aria-checked="false" data-minutes="5">5<span>mnt</span></button>
-        <button type="button" role="radio" aria-checked="false" data-minutes="10">10<span>mnt</span></button>
-        <button type="button" role="radio" aria-checked="true"  data-minutes="15">15<span>mnt</span></button>
-        <button type="button" role="radio" aria-checked="false" data-minutes="20">20<span>mnt</span></button>
-      </div>
-
+    <section class="controls" aria-label="Lokasi contoh">
       <p class="control-label">Coba lokasi contoh</p>
       <div class="demo-chips" id="demo-chips"></div>
     </section>
@@ -61,29 +77,40 @@
       </div>
 
       <div id="result-view" hidden>
+
         <div class="notice notice-demo" id="notice-demo" hidden>
           <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#info"></use></svg>
           <p id="notice-demo-text"></p>
         </div>
 
-        <div class="score-block">
-          <div class="score-ring" role="img" id="score-ring" aria-label="Skor kelengkapan">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle class="ring-track" cx="60" cy="60" r="52"></circle>
-              <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"></circle>
-            </svg>
-            <div class="score-num" id="score-num">0</div>
+        <div class="verdict-card">
+          <p class="verdict-context" id="score-caption"></p>
+          <div class="verdict-main">
+            <span class="score-num" id="score-num">0</span>
+            <div class="verdict-meta">
+              <p class="score-band" id="score-band">&nbsp;</p>
+              <p class="verdict-gap" id="verdict-gap"></p>
+            </div>
           </div>
-          <div class="score-meta">
-            <p class="score-band" id="score-band">&nbsp;</p>
-            <p class="score-caption" id="score-caption"></p>
-            <p class="score-cached" id="score-cached" hidden>
-              <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#clock"></use></svg>
-              <span>hasil tersimpan, dimuat instan</span>
-            </p>
+          <div class="band-scale" role="img" aria-label="Posisi skor pada skala 0 sampai 100">
+            <div class="band-track">
+              <i class="seg-low"></i><i class="seg-mid"></i><i class="seg-high"></i>
+            </div>
+            <div class="band-marker-lane"><span class="band-marker" id="ring-value"></span></div>
+            <div class="band-labels">
+              <span>0 bergantung kendaraan</span><span>40 cukup</span><span>70+ sangat layak jalan</span>
+            </div>
           </div>
+          <p class="score-cached" id="score-cached" hidden>
+            <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#clock"></use></svg>
+            <span>hasil tersimpan, dimuat instan</span>
+          </p>
         </div>
 
+        <div class="breakdown-head">
+          <p class="breakdown-title" id="breakdown-title">Rincian per kategori</p>
+          <span class="breakdown-hint">warna = titik di peta</span>
+        </div>
         <ul class="category-list" id="category-list"></ul>
 
         <p class="data-note">Data: OpenStreetMap &middot; isochrone dihitung di jaringan jalan pejalan kaki (OSMnx)</p>
@@ -91,10 +118,6 @@
     </section>
 
   </aside>
-
-  <main class="map-wrap">
-    <div id="map" aria-label="Peta interaktif"></div>
-  </main>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
