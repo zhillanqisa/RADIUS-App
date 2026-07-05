@@ -113,8 +113,39 @@
         </div>
         <ul class="category-list" id="category-list"></ul>
 
+        <div class="cost-card">
+          <div class="cost-head">
+            <p class="cost-title">Biaya Lokasi Bulanan</p>
+            <span class="cost-hint">estimasi, bukan angka pasti</span>
+          </div>
+          <label class="rent-field" for="rent-input">
+            <span>Sewa per bulan (Rp)</span>
+            <input id="rent-input" type="text" inputmode="numeric"
+                   placeholder="mis. 1.200.000" autocomplete="off"
+                   aria-describedby="cost-disclaimer">
+          </label>
+          <ul class="cost-lines" id="cost-lines"></ul>
+          <ul class="cost-notes" id="cost-notes"></ul>
+          <div class="cost-summary" id="cost-summary" hidden>
+            <div class="row"><span>Sewa</span><strong id="cost-rent"></strong></div>
+            <div class="row"><span>Estimasi ongkos tambahan</span><strong id="cost-extra"></strong></div>
+            <div class="row total"><span>Total Biaya Lokasi</span><strong id="cost-total"></strong></div>
+          </div>
+          <p class="cost-disclaimer" id="cost-disclaimer"></p>
+          <button type="button" class="compare-btn" id="compare-save">Simpan untuk perbandingan</button>
+        </div>
+
         <p class="data-note">Data: OpenStreetMap &middot; isochrone dihitung di jaringan jalan pejalan kaki (OSMnx)</p>
       </div>
+    </section>
+
+    <section class="compare-card" id="compare-card" aria-label="Perbandingan dua lokasi" hidden>
+      <div class="cost-head">
+        <p class="cost-title">Perbandingan 2 Lokasi</p>
+        <button type="button" class="compare-clear" id="compare-clear">hapus</button>
+      </div>
+      <div class="compare-grid" id="compare-grid"></div>
+      <p class="compare-note">Yang dibandingkan total biaya, bukan sewa. Sewa termurah belum tentu total termurah.</p>
     </section>
 
   </aside>

@@ -106,6 +106,39 @@ jadi total bobot tidak harus 100).
 - **40-69** — cukup terlayani; ada kesenjangan kategori tertentu.
 - **< 40** — bergantung kendaraan untuk kebutuhan dasar.
 
+## Biaya Lokasi Bulanan ("Total Cost of Location")
+
+Sewa murah di lokasi yang tidak walkable sering kali lebih mahal secara
+total: setiap kebutuhan yang tak terjangkau jalan kaki berubah jadi ongkos
+ojol/GoFood bulanan. Fitur ini menghitung estimasi itu dan menjumlahkannya
+dengan sewa.
+
+### Metodologi
+
+- Asumsi tarif dan frekuensi ada di `cost_assumptions.py`. Tarif per
+  perjalanan bersumber dari data publik tarif GoRide Zona I (Bandung/Jawa
+  non-Jabodetabek, ~pertengahan 2026): Rp1.850-2.300/km, tarif minimum 4 km
+  Rp8.000-10.000, ongkir GoFood ~Rp9.000. **Frekuensi perjalanan per bulan
+  adalah estimasi penulis, BUKAN data survei** -- akan direvisi bila ada
+  data penggunaan nyata.
+- Kategori `count == 0` (tidak terjangkau): 100% frekuensi bulanan dihitung
+  sebagai perjalanan ojol (`trips_per_month × cost_per_trip`).
+- Kategori `count == 1` (hanya 1 pilihan): dihitung **50%** dari frekuensi
+  (`SINGLE_OPTION_FACTOR` di `app/costs.py`). Satu pilihan tetap bisa
+  dijalani kaki; membebankan tarif penuh akan melebih-lebihkan biaya.
+- Hasil disajikan sebagai **rentang ±20%**, dibulatkan ke Rp1.000 -- karena
+  ini estimasi, angka presisi tunggal justru menyesatkan. UI menyatakannya
+  eksplisit.
+- `sekolah`, `peribadatan`, dan `transit` sengaja **tidak** dikonversi ke
+  rupiah (pola perjalanannya bukan ojol per kebutuhan); UI menampilkan
+  catatan kualitatif sebagai gantinya. Alasan lengkap ada di docstring
+  `cost_assumptions.py`.
+- Total Biaya Lokasi = sewa (input pengguna) + rentang ongkos tambahan.
+  Perbandingan 2 lokasi menyorot **total** termurah, bukan sewa termurah.
+
+Semua angka asumsi menunggu validasi data nyata (mis. survei kecil
+pengguna); struktur file memisahkan asumsi dari logika supaya revisi murah.
+
 ## Keandalan demo (wifi venue tidak stabil)
 
 - **3 lokasi Bandung sudah dipra-hitung** (kampus ITB Ganesha, Pasar Baru,

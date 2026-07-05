@@ -42,6 +42,18 @@ const els = {
   verdictGap: document.getElementById("verdict-gap"),
   breakdownTitle: document.getElementById("breakdown-title"),
   categoryList: document.getElementById("category-list"),
+  rentInput: document.getElementById("rent-input"),
+  costLines: document.getElementById("cost-lines"),
+  costNotes: document.getElementById("cost-notes"),
+  costSummary: document.getElementById("cost-summary"),
+  costRent: document.getElementById("cost-rent"),
+  costExtra: document.getElementById("cost-extra"),
+  costTotal: document.getElementById("cost-total"),
+  costDisclaimer: document.getElementById("cost-disclaimer"),
+  compareSave: document.getElementById("compare-save"),
+  compareCard: document.getElementById("compare-card"),
+  compareGrid: document.getElementById("compare-grid"),
+  compareClear: document.getElementById("compare-clear"),
 };
 
 const EMPTY_DEFAULTS = {
@@ -53,6 +65,10 @@ const state = {
   minutes: 15,
   loading: false,
   center: null,
+  rent: 0,
+  locationLabel: null,
+  costEst: null,
+  compare: [],   // maks 2 snapshot untuk perbandingan
 };
 
 let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
@@ -77,7 +93,9 @@ const poiLayer = L.layerGroup().addTo(map);
 let centerMarker = null;
 
 map.on("click", (e) => {
-  if (!state.loading) runAnalysis(e.latlng.lat, e.latlng.lng);
+  if (state.loading) return;
+  state.locationLabel = `Titik (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`;
+  runAnalysis(e.latlng.lat, e.latlng.lng);
 });
 
 function setCenterMarker(lat, lon) {
@@ -116,6 +134,116 @@ function resetEmptyState() {
 
 function bandFor(score) {
   return SCORE_BANDS.find((b) => score >= b.min) || SCORE_BANDS[SCORE_BANDS.length - 1];
+}
+
+/* ---------- biaya lokasi ---------- */
+
+const EMPTY_COST = { lines: [], notes: [], subtotal: 0, range: { low: 0, high: 0 }, disclaimer: "" };
+
+const fmtRp = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
+
+function fmtRange(low, high) {
+  return low === high ? fmtRp(low) : `${fmtRp(low)} - ${fmtRp(high)}`;
+}
+
+function parseRent(text) {
+  const digits = String(text).replace(/\D/g, "");
+  return digits ? Math.min(parseInt(digits, 10), 1_000_000_000) : 0;
+}
+
+function costLineWhy(line) {
+  const trips = line.trips_per_month;
+  const base = `${trips}x/bulan × ${fmtRp(line.cost_per_trip)}`;
+  return line.reason === "missing"
+    ? `tidak terjangkau jalan kaki · ${base}`
+    : `hanya 1 pilihan · ${base} × 50%`;
+}
+
+function renderCost(est) {
+  state.costEst = est || EMPTY_COST;
+
+  els.costLines.replaceChildren();
+  if (state.costEst.lines.length === 0) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="line-label">Tidak ada ongkos tambahan
+        <span class="line-why">semua kategori berbiaya terjangkau jalan kaki</span></span>
+      <span class="line-amount is-zero">Rp 0</span>`;
+    els.costLines.appendChild(li);
+  }
+  for (const line of state.costEst.lines) {
+    const meta = CATEGORY_META[line.category];
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="line-label"><span class="l-name"></span>
+        <span class="line-why"></span></span>
+      <span class="line-amount"></span>`;
+    li.querySelector(".l-name").textContent = meta ? meta.label : line.category;
+    li.querySelector(".line-why").textContent = costLineWhy(line);
+    li.querySelector(".line-amount").textContent = fmtRp(line.monthly);
+    els.costLines.appendChild(li);
+  }
+
+  els.costNotes.replaceChildren();
+  for (const note of state.costEst.notes) {
+    const meta = CATEGORY_META[note.category];
+    const li = document.createElement("li");
+    li.innerHTML = `<svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#info"></use></svg>
+      <span><span class="note-cat"></span> <span class="note-text"></span></span>`;
+    li.querySelector(".note-cat").textContent = (meta ? meta.label : note.category) + ":";
+    li.querySelector(".note-text").textContent = note.note;
+    els.costNotes.appendChild(li);
+  }
+
+  els.costDisclaimer.textContent = state.costEst.disclaimer;
+  updateCostSummary();
+}
+
+function updateCostSummary() {
+  const est = state.costEst;
+  if (!est) {
+    els.costSummary.hidden = true;
+    return;
+  }
+  const { low, high } = est.range;
+  els.costRent.textContent = state.rent > 0 ? fmtRp(state.rent) : "belum diisi";
+  els.costExtra.textContent = fmtRange(low, high);
+  els.costTotal.textContent = fmtRange(state.rent + low, state.rent + high);
+  els.costSummary.hidden = false;
+}
+
+/* ---------- perbandingan 2 lokasi ---------- */
+
+function renderCompare() {
+  els.compareCard.hidden = state.compare.length === 0;
+  els.compareGrid.replaceChildren();
+  if (state.compare.length === 0) return;
+
+  // pemenang = total titik tengah terendah (sewa + subtotal), hanya saat 2 slot terisi
+  let winIdx = -1;
+  if (state.compare.length === 2) {
+    const mids = state.compare.map((s) => s.rent + s.subtotal);
+    if (mids[0] !== mids[1]) winIdx = mids[0] < mids[1] ? 0 : 1;
+  }
+
+  state.compare.forEach((snap, idx) => {
+    const col = document.createElement("div");
+    col.className = "compare-col" + (idx === winIdx ? " win" : "");
+    col.innerHTML = `
+      <p class="c-label"></p>
+      <div class="c-row"><span>Skor (${snap.minutes} mnt)</span><strong>${snap.score}</strong></div>
+      <div class="c-row"><span>Sewa</span><strong>${snap.rent > 0 ? fmtRp(snap.rent) : "-"}</strong></div>
+      <div class="c-row"><span>Ongkos tambahan</span><strong>${fmtRange(snap.low, snap.high)}</strong></div>
+      <div class="c-row"><span>Total</span><strong>${fmtRange(snap.rent + snap.low, snap.rent + snap.high)}</strong></div>
+      ${idx === winIdx ? '<span class="c-win-pill">Lebih hemat total</span>' : ""}`;
+    col.querySelector(".c-label").textContent = snap.label;
+    els.compareGrid.appendChild(col);
+  });
+
+  if (state.compare.length === 1) {
+    const ph = document.createElement("div");
+    ph.className = "compare-col";
+    ph.innerHTML = '<p class="c-slot">Analisis lokasi lain, lalu simpan untuk membandingkan.</p>';
+    els.compareGrid.appendChild(ph);
+  }
 }
 
 /* ---------- dock durasi: skor per durasi ---------- */
@@ -203,6 +331,10 @@ function renderResult(data) {
   els.ringValue.style.left = `${Math.max(0, Math.min(100, data.score))}%`;
 
   els.scoreCached.hidden = !(data.cached && data.source === "live");
+
+  // biaya lokasi (cost_estimate dihitung server; fallback aman kalau absen)
+  state.lastScore = score;
+  renderCost(data.cost_estimate);
 
   // notice demo
   const isDemo = data.source === "demo";
@@ -364,6 +496,7 @@ async function doSearch(query) {
       btn.addEventListener("click", () => {
         hideSearchResults();
         els.searchInput.value = r.name.split(",")[0];
+        state.locationLabel = r.name.split(",").slice(0, 2).join(",");
         map.setView([r.lat, r.lon], 15);
         runAnalysis(r.lat, r.lon);
       });
@@ -402,6 +535,37 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest(".search-block")) hideSearchResults();
 });
 
+/* ---------- input sewa & simpan perbandingan ---------- */
+
+els.rentInput.addEventListener("input", () => {
+  state.rent = parseRent(els.rentInput.value);
+  els.rentInput.value = state.rent > 0 ? state.rent.toLocaleString("id-ID") : "";
+  updateCostSummary();
+});
+
+els.compareSave.addEventListener("click", () => {
+  const est = state.costEst;
+  if (!est || !state.center) return;
+  const snap = {
+    label: state.locationLabel ||
+      `Titik (${state.center.lat.toFixed(4)}, ${state.center.lon.toFixed(4)})`,
+    minutes: state.minutes,
+    score: state.lastScore ?? 0,
+    rent: state.rent,
+    subtotal: est.subtotal,
+    low: est.range.low,
+    high: est.range.high,
+  };
+  // simpan maksimal 2: slot ketiga menggantikan yang paling lama
+  state.compare = [...state.compare.slice(-1), snap];
+  renderCompare();
+});
+
+els.compareClear.addEventListener("click", () => {
+  state.compare = [];
+  renderCompare();
+});
+
 /* ---------- kontrol durasi ---------- */
 
 els.durationGroup.addEventListener("click", (e) => {
@@ -431,6 +595,7 @@ async function init() {
       btn.textContent = loc.name;
       btn.addEventListener("click", () => {
         if (state.loading) return;
+        state.locationLabel = loc.name;
         map.setView([loc.lat, loc.lon], 15);
         runAnalysis(loc.lat, loc.lon);
       });

@@ -16,6 +16,7 @@ from typing import Any
 from shapely.geometry import mapping
 
 from app import cache
+from app.costs import estimate_extra_costs
 from radius_core import RadiusResult, analyze_location, generate_demo_data
 
 logger = logging.getLogger("radius.services")
@@ -76,6 +77,17 @@ def serialize_result(
     }
 
 
+def _with_cost(payload: dict[str, Any]) -> dict[str, Any]:
+    """Attach the cost estimate at serve time.
+
+    Computed on every request (cheap, pure) instead of being stored, so
+    cached payloads written before this feature existed -- and future
+    assumption revisions -- never require cache invalidation.
+    """
+    payload["cost_estimate"] = estimate_extra_costs(payload.get("breakdown") or {})
+    return payload
+
+
 def analyze(lat: float, lon: float, minutes: int) -> dict[str, Any]:
     """Analyze a location. Never raises; always returns a payload.
 
@@ -84,13 +96,13 @@ def analyze(lat: float, lon: float, minutes: int) -> dict[str, Any]:
     cached = cache.get(lat, lon, minutes)
     if cached is not None:
         logger.info("Cache hit for (%.4f, %.4f, %d min).", lat, lon, minutes)
-        return {**cached, "cached": True}
+        return _with_cost({**cached, "cached": True})
 
     try:
         result = analyze_location(lat, lon, minutes=minutes)
         payload = serialize_result(result, source="live")
         cache.put(lat, lon, minutes, payload)
-        return {**payload, "cached": False}
+        return _with_cost({**payload, "cached": False})
     except Exception:
         logger.exception(
             "Live analysis failed for (%.4f, %.4f, %d min); using demo data.",
@@ -100,4 +112,4 @@ def analyze(lat: float, lon: float, minutes: int) -> dict[str, Any]:
         payload = serialize_result(result, source="demo", notice=DEMO_NOTICE)
         # Demo results are intentionally NOT cached to disk: the next
         # attempt should try the live pipeline again.
-        return {**payload, "cached": False}
+        return _with_cost({**payload, "cached": False})
