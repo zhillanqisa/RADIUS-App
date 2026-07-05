@@ -1,27 +1,30 @@
-/* RADIUS frontend v2 "Peta Utama": Leaflet map penuh + panel verdict mengambang
-   + dock durasi dengan skor per durasi. Vanilla JS, tanpa build step.
-   Kontrak API tidak berubah: /api/config, /api/geocode, /api/analyze. */
+/* RADIUS frontend v3: Leaflet map + panel/bottom-sheet, hash routing,
+   dark mode (data-theme + prefers-color-scheme), i18n ID/EN (js/i18n.js).
+   Vanilla JS, tanpa build step. Kontrak API & id elemen tidak berubah. */
 "use strict";
 
 const CATEGORY_META = {
-  warung_minimarket: { label: "Warung & Minimarket", icon: "storefront", cssVar: "--cat-warung" },
-  kuliner: { label: "Kuliner", icon: "fork-knife", cssVar: "--cat-kuliner" },
-  sekolah: { label: "Sekolah", icon: "student", cssVar: "--cat-sekolah" },
-  faskes: { label: "Fasilitas Kesehatan", icon: "first-aid-kit", cssVar: "--cat-faskes" },
-  transit: { label: "Transportasi Umum", icon: "bus", cssVar: "--cat-transit" },
-  taman_ruang_terbuka: { label: "Taman & Ruang Terbuka", icon: "tree", cssVar: "--cat-taman" },
-  peribadatan: { label: "Tempat Ibadah", icon: "hands-praying", cssVar: "--cat-ibadah" },
+  warung_minimarket: { labelKey: "cat.warung", icon: "storefront", cssVar: "--cat-warung" },
+  kuliner: { labelKey: "cat.kuliner", icon: "fork-knife", cssVar: "--cat-kuliner" },
+  sekolah: { labelKey: "cat.sekolah", icon: "student", cssVar: "--cat-sekolah" },
+  faskes: { labelKey: "cat.faskes", icon: "first-aid-kit", cssVar: "--cat-faskes" },
+  transit: { labelKey: "cat.transit", icon: "bus", cssVar: "--cat-transit" },
+  taman_ruang_terbuka: { labelKey: "cat.taman", icon: "tree", cssVar: "--cat-taman" },
+  peribadatan: { labelKey: "cat.ibadah", icon: "hands-praying", cssVar: "--cat-ibadah" },
 };
 
 const SCORE_BANDS = [
-  { min: 70, label: "Sangat layak jalan kaki", cssVar: "--band-high" },
-  { min: 40, label: "Cukup terlayani", cssVar: "--band-mid" },
-  { min: 0, label: "Bergantung kendaraan", cssVar: "--band-low" },
+  { min: 70, labelKey: "result.band.high", cssVar: "--band-high" },
+  { min: 40, labelKey: "result.band.mid", cssVar: "--band-mid" },
+  { min: 0, labelKey: "result.band.low", cssVar: "--band-low" },
 ];
 
 const DURATIONS = [5, 10, 15, 20];
 
 const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const TILE_LIGHT = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const TILE_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
 const els = {
   searchInput: document.getElementById("search-input"),
@@ -61,11 +64,10 @@ const els = {
   miniScore: document.getElementById("mini-score"),
   miniBand: document.getElementById("mini-band"),
   miniCaption: document.getElementById("mini-caption"),
-};
-
-const EMPTY_DEFAULTS = {
-  title: els.stateEmpty.querySelector(".state-title").textContent,
-  body: els.stateEmpty.querySelector(".state-body").textContent,
+  panel: document.getElementById("panel"),
+  sheetHandle: document.getElementById("sheet-handle"),
+  swipeTrack: document.getElementById("swipe-track"),
+  swipeHint: document.getElementById("swipe-hint"),
 };
 
 const state = {
@@ -76,7 +78,9 @@ const state = {
   rent: 0,
   locationLabel: null,
   costEst: null,
-  compare: [],   // maks 2 snapshot untuk perbandingan
+  compare: [],     // maks 2 snapshot untuk perbandingan
+  lastData: null,  // payload terakhir, untuk re-render saat ganti bahasa/tema
+  lastScore: null,
 };
 
 let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
@@ -84,12 +88,74 @@ let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
 const cssVal = (name) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
+const catLabel = (key) => {
+  const meta = CATEGORY_META[key];
+  return meta ? t(meta.labelKey) : key;
+};
+
+/* ---------- tema (terang/gelap) ---------- */
+
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+function isDark() {
+  const manual = document.documentElement.getAttribute("data-theme");
+  if (manual === "dark") return true;
+  if (manual === "light") return false;
+  return prefersDark.matches;
+}
+
+function applyTheme() {
+  tileLayer.setUrl(isDark() ? TILE_DARK : TILE_LIGHT);
+  // warna inline (band, ikon kategori) dibaca dari CSS var saat render;
+  // render ulang hasil terakhir supaya ikut tema baru.
+  if (state.lastData) renderResult(state.lastData, { refetchDock: false });
+}
+
+function toggleTheme() {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("radius_theme", next); } catch (e) { /* abaikan */ }
+  applyTheme();
+}
+
+prefersDark.addEventListener("change", () => {
+  if (!document.documentElement.hasAttribute("data-theme")) applyTheme();
+});
+
+/* ---------- bahasa ---------- */
+
+function updateLangPills() {
+  const lang = getLang();
+  for (const btn of document.querySelectorAll(".lang-pill button")) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.lang === lang));
+  }
+}
+
+function applyStaticExtras() {
+  for (const el of document.querySelectorAll(".swipe-tool-tag")) {
+    el.textContent = t("menu.toolTag", { n: el.dataset.tool });
+  }
+}
+
+function refreshLanguage() {
+  applyI18n();
+  applyStaticExtras();
+  updateLangPills();
+  if (state.lastData) renderResult(state.lastData, { refetchDock: false });
+  renderCompare();
+  // dock skor yang sudah tampil ikut bahasa baru
+  for (const btn of els.durationGroup.querySelectorAll("button")) {
+    const el = btn.querySelector(".d-score");
+    if (!el.hidden && el.dataset.n) el.textContent = t("dock.score", { n: el.dataset.n });
+  }
+}
+
 /* ---------- map ---------- */
 
 const map = L.map("map", { zoomControl: false }).setView([-6.9147, 107.6098], 15);
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+const tileLayer = L.tileLayer(TILE_LIGHT, {
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: "abcd",
@@ -102,7 +168,10 @@ let centerMarker = null;
 
 map.on("click", (e) => {
   if (state.loading) return;
-  state.locationLabel = `Titik (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`;
+  state.locationLabel = t("map.point", {
+    lat: e.latlng.lat.toFixed(4),
+    lon: e.latlng.lng.toFixed(4),
+  });
   runAnalysis(e.latlng.lat, e.latlng.lng);
 });
 
@@ -129,10 +198,12 @@ function updateCompareVisibility() {
 function applyView() {
   const view = VIEW_FOR_HASH[location.hash] || "menu";
   state.view = view;
+  document.body.dataset.view = view;
   els.menuScreen.hidden = view !== "menu";
   els.durationDock.hidden = view === "menu";
   els.analysisView.hidden = view !== "peta";
   els.costView.hidden = view !== "biaya";
+  els.panel.classList.remove("sheet-full"); // sheet selalu mulai ringkas
   updateCompareVisibility();
   if (view !== "menu") {
     // peta diinisialisasi di balik overlay menu; pastikan ukurannya benar
@@ -159,8 +230,8 @@ function showError(title, body) {
 }
 
 function resetEmptyState() {
-  els.stateEmpty.querySelector(".state-title").textContent = EMPTY_DEFAULTS.title;
-  els.stateEmpty.querySelector(".state-body").textContent = EMPTY_DEFAULTS.body;
+  els.stateEmpty.querySelector(".state-title").textContent = t("state.empty.title");
+  els.stateEmpty.querySelector(".state-body").textContent = t("state.empty.body");
   els.stateEmpty.classList.remove("is-error");
 }
 
@@ -172,7 +243,7 @@ function bandFor(score) {
 
 const EMPTY_COST = { lines: [], notes: [], subtotal: 0, range: { low: 0, high: 0 }, disclaimer: "" };
 
-const fmtRp = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
+const fmtRp = (n) => "Rp " + Math.round(n).toLocaleString(getLang() === "en" ? "en-US" : "id-ID");
 
 function fmtRange(low, high) {
   return low === high ? fmtRp(low) : `${fmtRp(low)} - ${fmtRp(high)}`;
@@ -184,11 +255,11 @@ function parseRent(text) {
 }
 
 function costLineWhy(line) {
-  const trips = line.trips_per_month;
-  const base = `${trips}x/bulan × ${fmtRp(line.cost_per_trip)}`;
-  return line.reason === "missing"
-    ? `tidak terjangkau jalan kaki · ${base}`
-    : `hanya 1 pilihan · ${base} × 50%`;
+  const base = t("cost.why.base", {
+    trips: line.trips_per_month,
+    harga: fmtRp(line.cost_per_trip),
+  });
+  return t(line.reason === "missing" ? "cost.why.missing" : "cost.why.single", { base });
 }
 
 function renderCost(est) {
@@ -197,18 +268,19 @@ function renderCost(est) {
   els.costLines.replaceChildren();
   if (state.costEst.lines.length === 0) {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="line-label">Tidak ada ongkos tambahan
-        <span class="line-why">semua kategori berbiaya terjangkau jalan kaki</span></span>
+    li.innerHTML = `<span class="line-label"><span class="l-name"></span>
+        <span class="line-why"></span></span>
       <span class="line-amount is-zero">Rp 0</span>`;
+    li.querySelector(".l-name").textContent = t("cost.noExtra.title");
+    li.querySelector(".line-why").textContent = t("cost.noExtra.desc");
     els.costLines.appendChild(li);
   }
   for (const line of state.costEst.lines) {
-    const meta = CATEGORY_META[line.category];
     const li = document.createElement("li");
     li.innerHTML = `<span class="line-label"><span class="l-name"></span>
         <span class="line-why"></span></span>
       <span class="line-amount"></span>`;
-    li.querySelector(".l-name").textContent = meta ? meta.label : line.category;
+    li.querySelector(".l-name").textContent = catLabel(line.category);
     li.querySelector(".line-why").textContent = costLineWhy(line);
     li.querySelector(".line-amount").textContent = fmtRp(line.monthly);
     els.costLines.appendChild(li);
@@ -216,16 +288,16 @@ function renderCost(est) {
 
   els.costNotes.replaceChildren();
   for (const note of state.costEst.notes) {
-    const meta = CATEGORY_META[note.category];
     const li = document.createElement("li");
     li.innerHTML = `<svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#info"></use></svg>
       <span><span class="note-cat"></span> <span class="note-text"></span></span>`;
-    li.querySelector(".note-cat").textContent = (meta ? meta.label : note.category) + ":";
+    li.querySelector(".note-cat").textContent = catLabel(note.category) + ":";
     li.querySelector(".note-text").textContent = note.note;
     els.costNotes.appendChild(li);
   }
 
-  els.costDisclaimer.textContent = state.costEst.disclaimer;
+  // disclaimer dari kamus (bukan teks server) supaya ikut bahasa aktif
+  els.costDisclaimer.textContent = t("cost.disclaimerLong");
   updateCostSummary();
 }
 
@@ -236,7 +308,7 @@ function updateCostSummary() {
     return;
   }
   const { low, high } = est.range;
-  els.costRent.textContent = state.rent > 0 ? fmtRp(state.rent) : "belum diisi";
+  els.costRent.textContent = state.rent > 0 ? fmtRp(state.rent) : t("cost.rentEmpty");
   els.costExtra.textContent = fmtRange(low, high);
   els.costTotal.textContent = fmtRange(state.rent + low, state.rent + high);
   els.costSummary.hidden = false;
@@ -261,11 +333,11 @@ function renderCompare() {
     col.className = "compare-col" + (idx === winIdx ? " win" : "");
     col.innerHTML = `
       <p class="c-label"></p>
-      <div class="c-row"><span>Skor (${snap.minutes} mnt)</span><strong>${snap.score}</strong></div>
-      <div class="c-row"><span>Sewa</span><strong>${snap.rent > 0 ? fmtRp(snap.rent) : "-"}</strong></div>
-      <div class="c-row"><span>Ongkos tambahan</span><strong>${fmtRange(snap.low, snap.high)}</strong></div>
-      <div class="c-row"><span>Total</span><strong>${fmtRange(snap.rent + snap.low, snap.rent + snap.high)}</strong></div>
-      ${idx === winIdx ? '<span class="c-win-pill">Lebih hemat total</span>' : ""}`;
+      <div class="c-row"><span>${t("compare.rowScore", { menit: snap.minutes })}</span><strong>${snap.score}</strong></div>
+      <div class="c-row"><span>${t("compare.rowRent")}</span><strong>${snap.rent > 0 ? fmtRp(snap.rent) : "-"}</strong></div>
+      <div class="c-row"><span>${t("compare.rowExtra")}</span><strong>${fmtRange(snap.low, snap.high)}</strong></div>
+      <div class="c-row"><span>${t("compare.rowTotal")}</span><strong>${fmtRange(snap.rent + snap.low, snap.rent + snap.high)}</strong></div>
+      ${idx === winIdx ? `<span class="c-win-pill">${t("compare.winPill")}</span>` : ""}`;
     col.querySelector(".c-label").textContent = snap.label;
     els.compareGrid.appendChild(col);
   });
@@ -273,7 +345,10 @@ function renderCompare() {
   if (state.compare.length === 1) {
     const ph = document.createElement("div");
     ph.className = "compare-col";
-    ph.innerHTML = '<p class="c-slot">Analisis lokasi lain, lalu simpan untuk membandingkan.</p>';
+    const p = document.createElement("p");
+    p.className = "c-slot";
+    p.textContent = t("compare.slotHint");
+    ph.appendChild(p);
     els.compareGrid.appendChild(ph);
   }
 }
@@ -287,9 +362,11 @@ function setDurationScore(minutes, score) {
   if (score == null) {
     el.hidden = true;
     el.textContent = "";
+    delete el.dataset.n;
   } else {
     el.hidden = false;
-    el.textContent = `skor ${score}`;
+    el.dataset.n = String(score);
+    el.textContent = t("dock.score", { n: score });
   }
 }
 
@@ -335,15 +412,22 @@ function animateScoreNum(target) {
 
 /* ---------- render hasil ---------- */
 
-function renderResult(data) {
+function renderResult(data, opts) {
+  const refetchDock = !opts || opts.refetchDock !== false;
+  state.lastData = data;
+
   const score = Math.round(data.score);
   const band = bandFor(data.score);
   const bandColor = cssVal(band.cssVar);
 
   // verdict
-  els.scoreCaption.textContent = `Jangkauan ${data.minutes} menit jalan kaki dari titik terpilih`;
-  animateScoreNum(score);
-  els.scoreBand.textContent = band.label;
+  els.scoreCaption.textContent = t("result.caption", {
+    tempat: state.locationLabel || t("result.captionFallback"),
+    menit: data.minutes,
+  });
+  if (refetchDock) animateScoreNum(score);
+  else els.scoreNum.textContent = score;
+  els.scoreBand.textContent = t(band.labelKey);
   els.scoreBand.style.color = bandColor;
 
   const items = Object.entries(data.breakdown)
@@ -352,11 +436,11 @@ function renderResult(data) {
   const missing = items.filter((i) => i.count === 0).length;
   const thin = items.filter((i) => i.count === 1).length;
   if (missing === 0 && thin === 0) {
-    els.verdictGap.textContent = "Semua kategori kebutuhan harian terjangkau.";
+    els.verdictGap.textContent = t("result.gap.none");
   } else if (missing === 0) {
-    els.verdictGap.textContent = `Semua kategori ada, ${thin} di antaranya hanya 1 pilihan.`;
+    els.verdictGap.textContent = t("result.gap.thin", { n: thin });
   } else {
-    els.verdictGap.textContent = `${missing} dari ${items.length} kategori tidak terjangkau jalan kaki.`;
+    els.verdictGap.textContent = t("result.gap.some", { n: missing, total: items.length });
   }
 
   // marker pada skala band 0-100
@@ -367,10 +451,9 @@ function renderResult(data) {
   // verdict mini (halaman biaya)
   els.miniScore.textContent = score;
   els.miniScore.style.color = bandColor;
-  els.miniBand.textContent = band.label;
+  els.miniBand.textContent = t(band.labelKey);
   els.miniBand.style.color = bandColor;
-  els.miniCaption.textContent =
-    `dalam ${data.minutes} menit jalan kaki dari titik terpilih`;
+  els.miniCaption.textContent = t("result.miniCaption", { menit: data.minutes });
 
   // biaya lokasi (cost_estimate dihitung server; fallback aman kalau absen)
   state.lastScore = score;
@@ -379,10 +462,11 @@ function renderResult(data) {
   // notice demo
   const isDemo = data.source === "demo";
   els.noticeDemo.hidden = !isDemo;
-  if (isDemo) els.noticeDemoText.textContent = data.notice || "Menampilkan data simulasi.";
+  if (isDemo) els.noticeDemoText.textContent = data.notice || t("notice.demoFallback");
 
-  // kategori: kesenjangan terbesar dulu (0 tempat, lalu 1 tempat, lalu lengkap; bobot besar dulu)
-  els.breakdownTitle.textContent = missing > 0 ? "Yang kurang dulu" : "Rincian per kategori";
+  // kategori: kesenjangan terbesar dulu (0 tempat, lalu 1 tempat, lalu lengkap)
+  els.breakdownTitle.textContent =
+    missing > 0 ? t("result.breakdown.gapTitle") : t("result.breakdown.title");
   items.sort((a, b) => (b.weight - b.score) - (a.weight - a.score) || b.weight - a.weight);
 
   els.categoryList.replaceChildren();
@@ -400,20 +484,22 @@ function renderResult(data) {
         <span class="count"></span>
       </div>
       <span class="cat-status"></span>`;
-    li.querySelector(".name").textContent = meta.label;
+    li.querySelector(".name").textContent = t(meta.labelKey);
     li.querySelector(".count").textContent =
       item.count === 0
-        ? "tidak ditemukan dalam jangkauan"
-        : `${item.count} tempat terjangkau, nilai ${item.score}/${item.weight}`;
+        ? t("cat.count.none")
+        : t("cat.count.some", { n: item.count, score: item.score, weight: item.weight });
     const status = li.querySelector(".cat-status");
     if (item.count === 0) {
-      status.textContent = "Tidak terjangkau";
+      status.textContent = t("cat.status.bad");
       status.classList.add("is-bad");
+      li.classList.add("row-bad");
     } else if (item.count === 1) {
-      status.textContent = "Hanya 1 pilihan";
+      status.textContent = t("cat.status.warn");
       status.classList.add("is-warn");
+      li.classList.add("row-warn");
     } else {
-      status.textContent = "Ada pilihan";
+      status.textContent = t("cat.status.ok", { n: item.count });
       status.classList.add("is-ok");
     }
     els.categoryList.appendChild(li);
@@ -433,7 +519,7 @@ function renderResult(data) {
     if (!meta) continue;
     L.circleMarker([poi.lat, poi.lon], {
       radius: 6,
-      color: "#ffffff",
+      color: isDark() ? "#1c2823" : "#ffffff",
       weight: 1.5,
       fillColor: cssVal(meta.cssVar),
       fillOpacity: 0.95,
@@ -444,24 +530,32 @@ function renderResult(data) {
       .on("popupopen", (e) => {
         const node = e.popup.getElement();
         node.querySelector(".poi-name").textContent = poi.name;
-        node.querySelector(".poi-cat").textContent = meta.label;
+        node.querySelector(".poi-cat").textContent = t(meta.labelKey);
       })
       .addTo(poiLayer);
   }
 
   setCenterMarker(data.center.lat, data.center.lon);
-  if (isDesktop()) {
-    // beri ruang untuk panel kiri dan dock durasi atas
-    map.fitBounds(iso.getBounds(), {
-      paddingTopLeft: L.point(462, 84),
-      paddingBottomRight: L.point(40, 40),
-    });
-  } else {
-    map.fitBounds(iso.getBounds(), { padding: [26, 26] });
+  if (refetchDock) {
+    if (isDesktop()) {
+      // beri ruang untuk panel kiri dan dock durasi atas
+      map.fitBounds(iso.getBounds(), {
+        paddingTopLeft: L.point(462, 84),
+        paddingBottomRight: L.point(40, 40),
+      });
+    } else if (state.view === "peta") {
+      // mobile: sisakan ruang untuk bottom sheet (41vh) + kontrol atas
+      map.fitBounds(iso.getBounds(), {
+        paddingTopLeft: L.point(24, 132),
+        paddingBottomRight: L.point(24, Math.round(window.innerHeight * 0.44)),
+      });
+    } else {
+      map.fitBounds(iso.getBounds(), { padding: [26, 26] });
+    }
   }
 
   showState("result");
-  if (!REDUCED_MOTION) {
+  if (refetchDock && !REDUCED_MOTION) {
     els.resultView.classList.remove("enter");
     void els.resultView.offsetWidth; // restart animasi masuk
     els.resultView.classList.add("enter");
@@ -470,7 +564,7 @@ function renderResult(data) {
   // dock: skor durasi aktif langsung, durasi lain menyusul di latar belakang.
   // Saat fallback demo aktif, jangan memicu 3 percobaan Overpass tambahan.
   setDurationScore(data.minutes, score);
-  if (!isDemo) fetchOtherDurations(state.center);
+  if (refetchDock && !isDemo) fetchOtherDurations(state.center);
 }
 
 /* ---------- API ---------- */
@@ -488,15 +582,12 @@ async function runAnalysis(lat, lon) {
     const resp = await fetch(url);
     if (!resp.ok) {
       const detail = await resp.json().catch(() => ({}));
-      throw new Error(detail.detail || `Server mengembalikan status ${resp.status}`);
+      throw new Error(detail.detail || `HTTP ${resp.status}`);
     }
     renderResult(await resp.json());
   } catch (err) {
     console.error("Analysis failed:", err);
-    showError(
-      "Analisis gagal",
-      "Tidak dapat terhubung ke server RADIUS. Pastikan server berjalan, lalu coba lagi."
-    );
+    showError(t("state.error.title"), t("state.error.body"));
   } finally {
     state.loading = false;
   }
@@ -517,12 +608,12 @@ async function doSearch(query) {
     const resp = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
     if (!resp.ok) {
       const detail = await resp.json().catch(() => ({}));
-      throw new Error(detail.detail || "Pencarian gagal.");
+      throw new Error(detail.detail || t("search.failed"));
     }
     const { results } = await resp.json();
     els.searchResults.replaceChildren();
     if (results.length === 0) {
-      els.searchError.textContent = "Tempat tidak ditemukan. Coba kata kunci lain.";
+      els.searchError.textContent = t("search.notFound");
       els.searchError.hidden = false;
       hideSearchResults();
       return;
@@ -579,7 +670,10 @@ document.addEventListener("click", (e) => {
 
 els.rentInput.addEventListener("input", () => {
   state.rent = parseRent(els.rentInput.value);
-  els.rentInput.value = state.rent > 0 ? state.rent.toLocaleString("id-ID") : "";
+  els.rentInput.value =
+    state.rent > 0
+      ? state.rent.toLocaleString(getLang() === "en" ? "en-US" : "id-ID")
+      : "";
   updateCostSummary();
 });
 
@@ -588,7 +682,7 @@ els.compareSave.addEventListener("click", () => {
   if (!est || !state.center) return;
   const snap = {
     label: state.locationLabel ||
-      `Titik (${state.center.lat.toFixed(4)}, ${state.center.lon.toFixed(4)})`,
+      `(${state.center.lat.toFixed(4)}, ${state.center.lon.toFixed(4)})`,
     minutes: state.minutes,
     score: state.lastScore ?? 0,
     rent: state.rent,
@@ -617,6 +711,73 @@ els.durationGroup.addEventListener("click", (e) => {
   state.minutes = Number(btn.dataset.minutes);
   if (state.center) runAnalysis(state.center.lat, state.center.lon);
 });
+
+/* ---------- kontrol bahasa & tema (semua instance) ---------- */
+
+document.addEventListener("click", (e) => {
+  const langBtn = e.target.closest(".lang-pill button[data-lang]");
+  if (langBtn) {
+    setLang(langBtn.dataset.lang);
+    refreshLanguage();
+    return;
+  }
+  if (e.target.closest(".theme-btn")) toggleTheme();
+});
+
+/* ---------- bottom sheet (mobile, view peta) ---------- */
+
+function setSheetFull(full) {
+  els.panel.classList.toggle("sheet-full", full);
+}
+
+(function initSheetDrag() {
+  const handle = els.sheetHandle;
+  if (!handle) return;
+  let startY = null;
+
+  handle.addEventListener("pointerdown", (e) => {
+    startY = e.clientY;
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener("pointerup", (e) => {
+    if (startY === null) return;
+    const delta = startY - e.clientY; // positif = ditarik ke atas
+    if (Math.abs(delta) > 40) setSheetFull(delta > 0);
+    else setSheetFull(!els.panel.classList.contains("sheet-full")); // tap = toggle
+    startY = null;
+  });
+  handle.addEventListener("pointercancel", () => { startY = null; });
+})();
+
+/* ---------- menu dua pintu geser (mobile) ---------- */
+
+(function initMenuSwipe() {
+  const track = els.swipeTrack;
+  if (!track) return;
+  const panes = [...track.querySelectorAll(".swipe-pane")];
+  const dots = [...document.querySelectorAll(".swipe-dots span")];
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const idx = panes.indexOf(entry.target);
+        dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+        const key = idx === 0 ? "menu.swipeHint" : "menu.swipeBack";
+        els.swipeHint.dataset.i18n = key;
+        els.swipeHint.textContent = t(key);
+      }
+    },
+    { root: track, threshold: 0.6 }
+  );
+  panes.forEach((p) => observer.observe(p));
+
+  // peek animation sekali saat mount (CSS .peek; dihormati reduced-motion)
+  if (!REDUCED_MOTION) {
+    track.classList.add("peek");
+    track.addEventListener("animationend", () => track.classList.remove("peek"), { once: true });
+  }
+})();
 
 /* ---------- init ---------- */
 
@@ -647,5 +808,9 @@ async function init() {
   }
 }
 
+applyI18n();
+applyStaticExtras();
+updateLangPills();
+applyTheme();
 applyView();
 init();

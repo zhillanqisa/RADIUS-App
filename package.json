@@ -1,0 +1,22 @@
+{
+  "name": "radius-app",
+  "version": "1.0.0",
+  "description": "RADIUS mengukur seberapa layak-jalan-kaki satu titik lokasi: seberapa lengkap kebutuhan harian (warung, sekolah, faskes, transit, taman, kuliner, tempat ibadah) yang bisa dijangkau **berjalan kaki di jaringan jalan sungguhan** dalam 5/10/15/20 menit. Bukan radius lingkaran — gang buntu, sungai, dan rel kereta benar-benar membatasi jangkauan.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/core": "^8.4.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.7"
+  }
+}

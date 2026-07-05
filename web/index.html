@@ -2,9 +2,20 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>RADIUS - Skor Kota 15 Menit</title>
   <meta name="description" content="Seberapa lengkap kebutuhan harian yang bisa dijangkau jalan kaki dari satu titik? Analisis jaringan jalan sungguhan, bukan radius lingkaran.">
+  <script>
+    /* Tema dibaca SEBELUM CSS supaya tidak ada flash (DESIGN-SPEC Bag. 4). */
+    (function () {
+      try {
+        var t = localStorage.getItem("radius_theme");
+        if (t === "dark" || t === "light") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) { /* localStorage bisa mati di WebView privat; abaikan */ }
+    })();
+  </script>
   <link rel="preload" href="vendor/fonts/outfit-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/app.css">
@@ -13,29 +24,74 @@
 
 <div id="menu-screen">
   <div class="menu-inner">
-    <header class="menu-brand">
-      <div class="brand-mark brand-mark-lg" aria-hidden="true"><i></i></div>
-      <h1 class="menu-title">RADIUS</h1>
-      <p class="menu-tag">Skor Kota 15 Menit &middot; Bandung</p>
-      <p class="menu-sub">Seberapa layak-jalan-kaki sebuah lokasi? Dihitung di jaringan jalan pejalan kaki sungguhan, bukan radius lingkaran.</p>
+    <header class="menu-topbar">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"><i></i></div>
+        <span class="brand-name">RADIUS</span>
+      </div>
+      <div class="ui-controls">
+        <div class="lang-pill" role="group" aria-label="Bahasa">
+          <button type="button" data-lang="id" aria-pressed="true">ID</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button type="button" class="theme-btn" data-i18n-attr="aria-label:theme.toggle;title:theme.toggle">
+          <svg class="icon icon-moon" aria-hidden="true"><use href="vendor/icons/sprite.svg#moon"></use></svg>
+          <svg class="icon icon-sun" aria-hidden="true"><use href="vendor/icons/sprite.svg#sun"></use></svg>
+        </button>
+      </div>
     </header>
+
+    <header class="menu-brand">
+      <p class="menu-tag" data-i18n="menu.kicker">Skor Kota 15 Menit</p>
+      <h1 class="menu-title" data-i18n="menu.title">Kota yang baik bisa dijalani kaki</h1>
+      <p class="menu-sub" data-i18n="menu.sub">Seberapa enak lokasimu untuk hidup tanpa kendaraan? Pilih alatnya.</p>
+    </header>
+
     <nav class="menu-cards" aria-label="Pilih fitur">
       <a class="menu-card" href="#/peta">
         <span class="mc-icon" aria-hidden="true">
           <svg class="icon"><use href="vendor/icons/sprite.svg#person-simple-walk"></use></svg>
         </span>
-        <span class="mc-title">Analisis Walkability</span>
-        <span class="mc-desc">Skor 0-100, peta jangkauan jalan kaki, dan rincian fasilitas harian per kategori.</span>
+        <span class="mc-title" data-i18n="menu.tool1.name">Cek Lokasi Saya</span>
+        <span class="mc-desc" data-i18n="menu.tool1.desc">Nilai 0-100 dan peta: apa saja yang bisa dicapai jalan kaki dari titikmu.</span>
       </a>
       <a class="menu-card" href="#/biaya">
         <span class="mc-icon" aria-hidden="true">
           <svg class="icon"><use href="vendor/icons/sprite.svg#wallet"></use></svg>
         </span>
-        <span class="mc-title">Kalkulator Biaya Lokasi</span>
-        <span class="mc-desc">Sewa + estimasi ongkos ojol untuk kebutuhan yang tak terjangkau, dan perbandingan 2 lokasi.</span>
+        <span class="mc-title" data-i18n="menu.tool2.name">Hitung Biaya Tinggal</span>
+        <span class="mc-desc" data-i18n="menu.tool2.desc">Sewa murah belum tentu hemat. Hitung sewa + ongkos ojek bulanan, bandingkan 2 lokasi.</span>
       </a>
     </nav>
-    <p class="menu-note">Data: OpenStreetMap &middot; analisis jaringan jalan pejalan kaki (OSMnx)</p>
+
+    <nav class="menu-swipe" id="menu-swipe" aria-label="Pilih fitur">
+      <div class="swipe-track" id="swipe-track">
+        <a class="swipe-pane pane-dark" href="#/peta">
+          <span class="mc-icon" aria-hidden="true">
+            <svg class="icon"><use href="vendor/icons/sprite.svg#person-simple-walk"></use></svg>
+          </span>
+          <span class="sp-tag swipe-tool-tag" data-tool="01" aria-hidden="true">ALAT 01</span>
+          <span class="sp-title" data-i18n="menu.tool1.name">Cek Lokasi Saya</span>
+          <span class="sp-desc" data-i18n="menu.tool1.desc">Nilai 0-100 dan peta: apa saja yang bisa dicapai jalan kaki dari titikmu.</span>
+          <span class="sp-sample"><strong>55</strong> <em data-i18n="menu.tool1.sample">contoh: Antapani, lumayan</em></span>
+          <span class="sp-cta" data-i18n="menu.tool1.cta">Mulai cek</span>
+        </a>
+        <a class="swipe-pane pane-light" href="#/biaya">
+          <span class="mc-icon" aria-hidden="true">
+            <svg class="icon"><use href="vendor/icons/sprite.svg#wallet"></use></svg>
+          </span>
+          <span class="sp-tag swipe-tool-tag" data-tool="02" aria-hidden="true">ALAT 02</span>
+          <span class="sp-title" data-i18n="menu.tool2.name">Hitung Biaya Tinggal</span>
+          <span class="sp-desc" data-i18n="menu.tool2.desc">Sewa murah belum tentu hemat. Hitung sewa + ongkos ojek bulanan, bandingkan 2 lokasi.</span>
+          <span class="sp-sample"><strong>Rp1,51-1,67 jt</strong> <em data-i18n="menu.tool2.sample">contoh total per bulan di Antapani</em></span>
+          <span class="sp-cta" data-i18n="menu.tool2.cta">Mulai hitung</span>
+        </a>
+      </div>
+      <div class="swipe-dots" aria-hidden="true"><span class="active"></span><span></span></div>
+      <p class="swipe-hint" id="swipe-hint" data-i18n="menu.swipeHint">Geser untuk alat kedua</p>
+    </nav>
+
+    <p class="menu-note" data-i18n="menu.note">Data: OpenStreetMap · analisis jaringan jalan pejalan kaki (OSMnx)</p>
   </div>
 </div>
 
@@ -47,41 +103,52 @@
     <div class="duration-dock">
       <div class="segmented" role="radiogroup" aria-label="Durasi jalan kaki dan skor per durasi" id="duration-group">
         <button type="button" role="radio" aria-checked="false" data-minutes="5">
-          <span class="d-min">5 mnt</span><span class="d-score" hidden></span>
+          <span class="d-min">5 <span data-i18n="dock.min">mnt</span></span><span class="d-score" hidden></span>
         </button>
         <button type="button" role="radio" aria-checked="false" data-minutes="10">
-          <span class="d-min">10 mnt</span><span class="d-score" hidden></span>
+          <span class="d-min">10 <span data-i18n="dock.min">mnt</span></span><span class="d-score" hidden></span>
         </button>
         <button type="button" role="radio" aria-checked="true" data-minutes="15">
-          <span class="d-min">15 mnt</span><span class="d-score" hidden></span>
+          <span class="d-min">15 <span data-i18n="dock.min">mnt</span></span><span class="d-score" hidden></span>
         </button>
         <button type="button" role="radio" aria-checked="false" data-minutes="20">
-          <span class="d-min">20 mnt</span><span class="d-score" hidden></span>
+          <span class="d-min">20 <span data-i18n="dock.min">mnt</span></span><span class="d-score" hidden></span>
         </button>
       </div>
     </div>
   </main>
 
   <aside class="panel" id="panel">
+    <div class="sheet-handle" id="sheet-handle" aria-hidden="true"><i></i></div>
 
     <header class="brand">
       <div class="brand-row">
         <div class="brand-mark" aria-hidden="true"><i></i></div>
         <div class="brand-text">
           <h1 class="brand-name">RADIUS</h1>
-          <p class="brand-sub">Skor Kota 15 Menit</p>
+          <p class="brand-sub" data-i18n="brand.sub">Skor Kota 15 Menit</p>
         </div>
       </div>
       <div class="brand-side">
-        <span class="brand-city">Bandung</span>
-        <a class="back-menu" href="#/menu">Menu</a>
+        <div class="ui-controls">
+          <div class="lang-pill" role="group" aria-label="Bahasa">
+            <button type="button" data-lang="id" aria-pressed="true">ID</button>
+            <button type="button" data-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <button type="button" class="theme-btn" data-i18n-attr="aria-label:theme.toggle;title:theme.toggle">
+            <svg class="icon icon-moon" aria-hidden="true"><use href="vendor/icons/sprite.svg#moon"></use></svg>
+            <svg class="icon icon-sun" aria-hidden="true"><use href="vendor/icons/sprite.svg#sun"></use></svg>
+          </button>
+        </div>
+        <a class="back-menu" href="#/menu" data-i18n="brand.menu">Menu</a>
       </div>
     </header>
 
     <section class="search-block" aria-label="Pencarian lokasi">
       <div class="search-field">
         <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#magnifying-glass"></use></svg>
-        <input id="search-input" type="search" placeholder="Cari alamat, atau klik titik di peta" autocomplete="off"
+        <input id="search-input" type="search" placeholder="Cari alamat, atau ketuk peta" autocomplete="off"
+               data-i18n-attr="placeholder:search.placeholder"
                aria-label="Cari alamat atau nama tempat" enterkeyhint="search">
       </div>
       <ul class="search-results" id="search-results" role="listbox" hidden></ul>
@@ -89,7 +156,7 @@
     </section>
 
     <section class="controls" aria-label="Lokasi contoh">
-      <p class="control-label">Coba lokasi contoh</p>
+      <p class="control-label" data-i18n="controls.demoLabel">Coba lokasi contoh</p>
       <div class="demo-chips" id="demo-chips"></div>
     </section>
 
@@ -97,14 +164,14 @@
 
       <div class="state state-empty" id="state-empty">
         <svg class="icon icon-lg" aria-hidden="true"><use href="vendor/icons/sprite.svg#map-pin"></use></svg>
-        <p class="state-title">Pilih titik untuk mulai</p>
-        <p class="state-body">Klik di peta, cari alamat, atau pakai salah satu lokasi contoh di atas.</p>
+        <p class="state-title" data-i18n="state.empty.title">Pilih titik untuk mulai</p>
+        <p class="state-body" data-i18n="state.empty.body">Ketuk peta, cari alamat, atau pakai salah satu lokasi contoh di atas.</p>
       </div>
 
       <div class="state state-loading" id="state-loading" hidden>
         <div class="skeleton-ring" aria-hidden="true"></div>
-        <p class="state-title">Menganalisis jaringan jalan&hellip;</p>
-        <p class="state-body">Mengambil data jalan &amp; fasilitas dari OpenStreetMap. Biasanya 5-30 detik untuk titik baru.</p>
+        <p class="state-title" data-i18n="state.loading.title">Menganalisis jaringan jalan…</p>
+        <p class="state-body" data-i18n="state.loading.body">Mengambil data jalan &amp; fasilitas dari OpenStreetMap. Biasanya 5-30 detik untuk titik baru.</p>
       </div>
 
       <div id="result-view" hidden>
@@ -130,20 +197,25 @@
             </div>
             <div class="band-marker-lane"><span class="band-marker" id="ring-value"></span></div>
             <div class="band-labels">
-              <span>0 bergantung kendaraan</span><span>40 cukup</span><span>70+ sangat layak jalan</span>
+              <span data-i18n="result.scaleLow">0 susah tanpa kendaraan</span><span data-i18n="result.scaleMid">40 cukup</span><span data-i18n="result.scaleHigh">100 semua dekat</span>
             </div>
           </div>
           <p class="score-cached" id="score-cached" hidden>
             <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#clock"></use></svg>
-            <span>hasil tersimpan, dimuat instan</span>
+            <span data-i18n="result.cached">hasil tersimpan, dimuat instan</span>
           </p>
         </div>
 
         <div class="breakdown-head">
           <p class="breakdown-title" id="breakdown-title">Rincian per kategori</p>
-          <span class="breakdown-hint">warna = titik di peta</span>
+          <span class="breakdown-hint" data-i18n="result.breakdown.hint">warna = titik di peta</span>
         </div>
         <ul class="category-list" id="category-list"></ul>
+        <p class="sheet-pull-hint" data-i18n="sheet.pullHint" aria-hidden="true">Tarik ke atas untuk semua kategori</p>
+        <div class="sheet-ctas">
+          <a class="sheet-cta primary" href="#/biaya" data-i18n="sheet.ctaCost">Hitung Biaya Tinggal</a>
+          <a class="sheet-cta" href="#/menu" data-i18n="sheet.ctaMenu">Kembali ke Menu</a>
+        </div>
         </div>
 
         <div id="cost-view" hidden>
@@ -156,44 +228,46 @@
         </div>
         <div class="cost-card">
           <div class="cost-head">
-            <p class="cost-title">Biaya Lokasi Bulanan</p>
-            <span class="cost-hint">estimasi, bukan angka pasti</span>
+            <p class="cost-title" data-i18n="cost.title">Biaya Lokasi Bulanan</p>
+            <span class="cost-hint" data-i18n="cost.hint">estimasi, bukan angka pasti</span>
           </div>
           <label class="rent-field" for="rent-input">
-            <span>Sewa per bulan (Rp)</span>
+            <span data-i18n="cost.rentLabel">Sewa per bulan (Rp)</span>
             <input id="rent-input" type="text" inputmode="numeric"
                    placeholder="mis. 1.200.000" autocomplete="off"
+                   data-i18n-attr="placeholder:cost.rentPlaceholder"
                    aria-describedby="cost-disclaimer">
           </label>
           <ul class="cost-lines" id="cost-lines"></ul>
           <ul class="cost-notes" id="cost-notes"></ul>
           <div class="cost-summary" id="cost-summary" hidden>
-            <div class="row"><span>Sewa</span><strong id="cost-rent"></strong></div>
-            <div class="row"><span>Estimasi ongkos tambahan</span><strong id="cost-extra"></strong></div>
-            <div class="row total"><span>Total Biaya Lokasi</span><strong id="cost-total"></strong></div>
+            <div class="row"><span data-i18n="cost.rowRent">Sewa</span><strong id="cost-rent"></strong></div>
+            <div class="row"><span data-i18n="cost.rowExtra">Estimasi ongkos tambahan</span><strong id="cost-extra"></strong></div>
+            <div class="row total"><span data-i18n="cost.totalLabel">Perkiraan total per bulan</span><strong id="cost-total"></strong></div>
           </div>
           <p class="cost-disclaimer" id="cost-disclaimer"></p>
-          <button type="button" class="compare-btn" id="compare-save">Simpan untuk perbandingan</button>
+          <button type="button" class="compare-btn" id="compare-save" data-i18n="cost.saveCompare">Simpan untuk perbandingan</button>
         </div>
         </div>
 
-        <p class="data-note">Data: OpenStreetMap &middot; isochrone dihitung di jaringan jalan pejalan kaki (OSMnx)</p>
+        <p class="data-note" data-i18n="data.note">Data: OpenStreetMap · isochrone dihitung di jaringan jalan pejalan kaki (OSMnx)</p>
       </div>
     </section>
 
     <section class="compare-card" id="compare-card" aria-label="Perbandingan dua lokasi" hidden>
       <div class="cost-head">
-        <p class="cost-title">Perbandingan 2 Lokasi</p>
-        <button type="button" class="compare-clear" id="compare-clear">hapus</button>
+        <p class="cost-title" data-i18n="compare.title">Perbandingan 2 Lokasi</p>
+        <button type="button" class="compare-clear" id="compare-clear" data-i18n="compare.clear">hapus</button>
       </div>
       <div class="compare-grid" id="compare-grid"></div>
-      <p class="compare-note">Yang dibandingkan total biaya, bukan sewa. Sewa termurah belum tentu total termurah.</p>
+      <p class="compare-note" data-i18n="compare.note">Yang dibandingkan total biaya, bukan sewa. Sewa termurah belum tentu total termurah.</p>
     </section>
 
   </aside>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

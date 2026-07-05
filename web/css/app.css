@@ -50,6 +50,52 @@
   --cat-ibadah: #3e8e9c;
 }
 
+/* ---- mode gelap (DESIGN-SPEC Bag. 3-4) ----
+   Sama-sama me-reassign custom property semantik. Dua jalur:
+   (a) OS gelap TANPA override manual light; (b) data-theme="dark" paksa. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #eef1ee;
+    --ink-2: #aeb8b0;
+    --ink-3: #8fa197;
+    --surface: #101815;
+    --card: #1c2823;
+    --line: #2c3a33;
+    --accent: #9dc3ae;
+    --accent-ink: #101815;
+    --accent-soft: #233d33;
+    --ok-bg: #233d33;   --ok-ink: #a9d8c2;
+    --warn-bg: #3a3320; --warn-ink: #e3c268;
+    --bad-bg: #3d2a23;  --bad-ink: #f0b9a6;
+    --band-low: #f0b9a6;
+    --band-mid: #e3c268;
+    --band-high: #a9d8c2;
+    --seg-low: #6e4636;
+    --seg-mid: #6d5e2f;
+    --seg-high: #3f6152;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #eef1ee;
+  --ink-2: #aeb8b0;
+  --ink-3: #8fa197;
+  --surface: #101815;
+  --card: #1c2823;
+  --line: #2c3a33;
+  --accent: #9dc3ae;
+  --accent-ink: #101815;
+  --accent-soft: #233d33;
+  --ok-bg: #233d33;   --ok-ink: #a9d8c2;
+  --warn-bg: #3a3320; --warn-ink: #e3c268;
+  --bad-bg: #3d2a23;  --bad-ink: #f0b9a6;
+  --band-low: #f0b9a6;
+  --band-mid: #e3c268;
+  --band-high: #a9d8c2;
+  --seg-low: #6e4636;
+  --seg-mid: #6d5e2f;
+  --seg-high: #3f6152;
+}
+
 * { box-sizing: border-box; }
 
 /* atribut hidden harus menang atas display rule mana pun */
@@ -75,6 +121,64 @@ input:focus-visible {
 .icon { width: 18px; height: 18px; fill: currentColor; flex: none; }
 .icon-lg { width: 30px; height: 30px; }
 
+/* ---- kontrol bahasa & tema (DESIGN-SPEC Bag. 9) ---- */
+.ui-controls { display: flex; align-items: center; gap: 8px; }
+.lang-pill {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+  height: 32px;
+}
+.lang-pill button {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.lang-pill button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.theme-btn {
+  width: 40px; height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.theme-btn:hover { border-color: var(--accent); }
+.theme-btn .icon { width: 19px; height: 19px; }
+/* tampilkan bulan di tema terang (untuk beralih ke gelap), matahari di gelap */
+.theme-btn .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-sun { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-btn .icon-moon { display: none; }
+  :root:not([data-theme="light"]) .theme-btn .icon-sun { display: inline; }
+}
+
+/* ---- menu awal ---- */
+.menu-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.menu-topbar .brand-row { display: flex; align-items: center; gap: 9px; }
+.menu-topbar .brand-name { font-size: 17px; font-weight: 700; letter-spacing: 0.06em; }
+
 /* ---- menu awal ---- */
 #menu-screen {
   position: fixed;
@@ -87,13 +191,8 @@ input:focus-visible {
   padding: 28px 20px;
   overflow-y: auto;
 }
-.menu-inner { max-width: 700px; width: 100%; text-align: center; }
-.menu-brand .brand-mark-lg {
-  width: 54px; height: 54px;
-  margin: 0 auto 14px;
-  border-width: 3px;
-}
-.menu-brand .brand-mark-lg i { width: 14px; height: 14px; }
+.menu-inner { max-width: 700px; width: 100%; }
+.menu-brand { text-align: center; }
 .menu-title {
   margin: 0;
   font-size: 34px;
@@ -149,13 +248,86 @@ input:focus-visible {
 .mc-icon .icon { width: 24px; height: 24px; }
 .mc-title { display: block; font-size: 16px; font-weight: 700; margin: 13px 0 4px; }
 .mc-desc { display: block; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
-.menu-note { margin: 0; font-size: 11.5px; color: var(--ink-3); }
-@media (max-width: 640px) {
-  .menu-cards { grid-template-columns: 1fr; }
-  .menu-title { font-size: 28px; }
-}
+.menu-note { margin: 0; font-size: 11.5px; color: var(--ink-3); text-align: center; }
+
+/* menu dua pintu geser: hanya mobile (default disembunyikan di desktop) */
+.menu-swipe { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .menu-card, .menu-card:hover, .menu-card:active { transform: none; }
+}
+
+/* ---- menu dua pintu geser (DESIGN-SPEC Bag. 7, mobile <=900px) ---- */
+@media (max-width: 900px) {
+  .menu-cards { display: none; }
+  .menu-swipe { display: block; margin: 24px 0 18px; }
+  .swipe-track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .swipe-track::-webkit-scrollbar { display: none; }
+  .swipe-track.peek { animation: swipe-peek 1.1s ease 0.35s 1; }
+  .swipe-pane {
+    flex: 0 0 88%;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    min-height: 62dvh;
+    border-radius: 18px;
+    padding: 22px 20px;
+    text-decoration: none;
+    box-shadow: 0 12px 30px rgba(10, 16, 14, 0.16);
+  }
+  .swipe-pane.pane-dark { background: var(--chrome); color: #eef1ee; }
+  .swipe-pane.pane-light {
+    background: var(--card);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .swipe-pane .mc-icon { background: rgba(255, 255, 255, 0.12); color: inherit; }
+  .swipe-pane.pane-light .mc-icon { background: var(--accent-soft); color: var(--accent-ink); }
+  .sp-tag {
+    margin-top: 18px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    opacity: 0.6;
+  }
+  .sp-title { font-size: 30px; font-weight: 700; line-height: 1.08; margin-top: 6px; }
+  .sp-desc { font-size: 13.5px; line-height: 1.5; margin-top: 10px; opacity: 0.82; }
+  .sp-sample { margin-top: auto; padding-top: 20px; font-size: 12.5px; opacity: 0.8; }
+  .sp-sample strong { font-size: 26px; font-weight: 700; display: block; }
+  .sp-cta {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 12px;
+  }
+  .swipe-pane.pane-dark .sp-cta { background: #eef1ee; color: var(--chrome); }
+  .swipe-pane.pane-light .sp-cta { background: var(--accent); color: var(--accent-ink); }
+  .swipe-dots { display: flex; justify-content: center; gap: 7px; margin-top: 16px; }
+  .swipe-dots span {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--line);
+    transition: background 0.2s ease, width 0.2s ease;
+  }
+  .swipe-dots span.active { background: var(--accent); width: 18px; border-radius: 999px; }
+  .swipe-hint { text-align: center; font-size: 12.5px; color: var(--ink-3); margin: 10px 0 0; }
+}
+@keyframes swipe-peek {
+  0%, 100% { transform: translateX(0); }
+  40% { transform: translateX(-12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-track.peek { animation: none; }
 }
 
 /* ---- shell: peta penuh, panel mengambang ---- */
@@ -203,7 +375,11 @@ input:focus-visible {
   letter-spacing: 0.05em;
   line-height: 1.2;
 }
-.brand-sub { margin: 0; color: var(--ink-2); font-size: 12.5px; }
+.brand-sub { margin: 0; color: var(--ink-2); font-size: 12.5px; white-space: nowrap; }
+.panel .brand { gap: 8px; }
+.panel .brand-side { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; }
+.panel .ui-controls .lang-pill { height: 30px; }
+.panel .ui-controls .theme-btn { width: 34px; height: 34px; }
 .brand-side { display: flex; align-items: center; gap: 6px; }
 .brand-city {
   font-size: 11.5px;
@@ -212,7 +388,7 @@ input:focus-visible {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 3px 8px;
-  background: #fff;
+  background: var(--card);
 }
 .back-menu {
   font-size: 11.5px;
@@ -233,7 +409,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 10px 14px;
@@ -279,7 +455,7 @@ input:focus-visible {
   left: 0; right: 0;
   margin: 6px 0 0; padding: 6px;
   list-style: none;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: 0 10px 28px rgba(22, 29, 26, 0.14);
@@ -420,7 +596,7 @@ input:focus-visible {
 
 /* ---- verdict ---- */
 .verdict-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px 18px 14px;
@@ -515,7 +691,7 @@ input:focus-visible {
   grid-template-columns: 28px 1fr auto;
   column-gap: 11px;
   align-items: center;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 7px 11px;
@@ -549,7 +725,7 @@ input:focus-visible {
 
 /* ---- biaya lokasi ---- */
 .cost-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px 16px;
@@ -675,7 +851,7 @@ input:focus-visible {
 
 /* ---- perbandingan 2 lokasi ---- */
 .compare-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px 16px;
@@ -799,25 +975,128 @@ input:focus-visible {
   box-shadow: 0 2px 8px rgba(22, 29, 26, 0.35);
 }
 
-/* ---- mobile: peta atas, panel bawah ---- */
+/* elemen khusus mobile-sheet: disembunyikan di desktop */
+.sheet-handle { display: none; }
+.sheet-pull-hint { display: none; }
+.sheet-ctas { display: none; }
+
+/* penanda kategori bermasalah (border tipis hangat) berlaku di semua ukuran */
+.category-list li.row-bad { border: 1px solid var(--bad-bg); }
+.category-list li.row-warn { border: 1px solid var(--warn-bg); }
+
+/* ---- mobile: peta besar + bottom sheet (DESIGN-SPEC Bag. 8) ---- */
 @media (max-width: 900px) {
-  .shell { height: auto; min-height: 100dvh; display: flex; flex-direction: column; }
-  .map-wrap { position: relative; height: 46dvh; flex: none; }
-  .panel {
-    position: relative;
-    left: auto; top: auto; bottom: auto;
-    width: auto;
-    flex: 1;
-    margin: -14px 12px 16px;
-    overflow-y: visible;
-  }
+  .shell { height: 100dvh; position: relative; }
+  .map-wrap { position: absolute; inset: 0; height: auto; }
+
+  /* search + dock mengambang di atas peta */
   .duration-dock {
     left: 50%;
-    top: 12px;
+    top: 74px;
+    transform: translateX(-50%);
   }
   .segmented { padding: 3px; }
-  .segmented button { min-width: 0; padding: 4px 10px 5px; }
+  .segmented button { min-width: 0; padding: 4px 12px 5px; }
   .segmented button .d-min { font-size: 12px; }
   .segmented button .d-score { font-size: 10px; }
+
+  /* panel jadi bottom sheet */
+  .panel {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    width: auto;
+    height: 41vh;
+    margin: 0;
+    border-radius: 22px 22px 0 0;
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    box-shadow: 0 -12px 34px rgba(10, 16, 14, 0.2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px 18px 20px;
+    transition: height 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 900;
+  }
+  .panel.sheet-full { height: 86vh; }
+
+  .sheet-handle {
+    display: block;
+    width: 100%;
+    padding: 8px 0 6px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .sheet-handle i {
+    display: block;
+    width: 40px; height: 4px;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: var(--line);
+  }
+
+  /* search mengambang terpisah dari sheet */
+  .search-block {
+    position: fixed;
+    left: 12px; right: 12px; top: 14px;
+    z-index: 950;
+  }
+  .search-field {
+    background: var(--card);
+    box-shadow: 0 6px 18px rgba(10, 16, 14, 0.14);
+  }
+
+  /* di halaman peta: brand + demo chips ringkas, agar sheet fokus ke hasil */
+  body[data-view="peta"] .panel .brand,
+  body[data-view="peta"] .panel .controls { display: none; }
+  body[data-view="peta"] .search-block { display: block; }
+
+  /* di halaman biaya: sheet penuh statis (bukan drag), tetap ada brand */
+  body[data-view="biaya"] .panel {
+    position: relative;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    border: 0;
+    z-index: 900;
+  }
+  body[data-view="biaya"] .shell { height: auto; min-height: 100dvh; overflow-y: auto; }
+  body[data-view="biaya"] .map-wrap { position: relative; height: 40dvh; }
+  body[data-view="biaya"] .sheet-handle { display: none; }
+  body[data-view="biaya"] .search-block { position: relative; left: auto; right: auto; top: auto; }
+
+  /* CTA lanjut + pull hint hanya saat halaman peta */
+  body[data-view="peta"] .sheet-pull-hint {
+    display: block;
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin: 12px 0 0;
+  }
+  body[data-view="peta"] .panel.sheet-full .sheet-pull-hint { display: none; }
+  body[data-view="peta"] .sheet-ctas { display: none; }
+  body[data-view="peta"] .panel.sheet-full .sheet-ctas {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .sheet-cta {
+    text-align: center;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 11px;
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .sheet-cta.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+  /* saat sheet ringkas, sisakan hanya verdict + 3 kategori pertama */
+  body[data-view="peta"] .panel:not(.sheet-full) .breakdown-head,
+  body[data-view="peta"] .panel:not(.sheet-full) .data-note { display: none; }
+  body[data-view="peta"] .panel:not(.sheet-full) .category-list li:nth-child(n+4) { display: none; }
+
   .state { padding: 22px 12px; }
+  .menu-topbar { margin-bottom: 18px; }
 }

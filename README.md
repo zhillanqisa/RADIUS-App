@@ -177,6 +177,42 @@ pengguna); struktur file memisahkan asumsi dari logika supaya revisi murah.
 - **Isochrone bergantung kelengkapan jaringan pejalan kaki OSM** — gang
   kecil yang belum dipetakan berarti jangkauan *underestimate*.
 
+## Aplikasi Android (Capacitor)
+
+Frontend `web/` dibungkus jadi aplikasi Android via Capacitor (WebView),
+tanpa menulis ulang logika ke Kotlin. Proyek `android/` sudah di-scaffold.
+
+Menjalankan di emulator/HP:
+
+```bash
+# 1. server FastAPI harus bisa diakses emulator lewat 10.0.2.2
+uvicorn app.server:app --host 0.0.0.0 --port 8000
+
+# 2. buka proyek Android (butuh Android Studio + SDK)
+npx cap open android
+# lalu Run dari Android Studio ke emulator/device
+```
+
+`capacitor.config.json` mengarahkan WebView ke `http://10.0.2.2:8000` selama
+dev (alias emulator untuk `localhost` host). Untuk build produksi: deploy
+FastAPI ke server publik dan ganti `server.url` ke domain itu, atau hapus
+`server.url` supaya `web/` di-bundle di dalam APK (fetch `/api/*` tetap harus
+menunjuk domain publik). Scaffold ulang: `scripts/setup-capacitor.sh`.
+
+Spesifikasi desain lengkap tampilan mobile ada di `DESIGN-SPEC.md`.
+
+### Tema, bahasa, dan tampilan mobile
+
+- **Mode gelap**: ikut `prefers-color-scheme`, bisa dipaksa via tombol tema
+  (bulan/matahari) di header; pilihan disimpan `localStorage.radius_theme`
+  dan dibaca sebelum first paint (tanpa flash). Tile peta ganti ke CARTO
+  `dark_all` saat gelap.
+- **Bahasa ID/EN**: pil di header, kamus di `web/js/i18n.js`
+  (`localStorage.radius_lang`, default `id`). Semua teks lewat `t()`.
+- **Menu mobile** (<900px): dua kartu penuh yang digeser (scroll-snap native).
+- **Hasil mobile**: peta besar + bottom sheet dengan handle tarik (snap ke 2
+  posisi: ringkas 3 kategori / penuh 7 kategori). Desktop tidak berubah.
+
 ## Konfigurasi
 
 Salin `.env.example` ke `.env` untuk mengubah kecepatan jalan, timeout

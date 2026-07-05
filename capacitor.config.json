@@ -1,0 +1,9 @@
+{
+  "appId": "id.ac.upi.radius",
+  "appName": "RADIUS",
+  "webDir": "web",
+  "server": {
+    "url": "http://10.0.2.2:8000",
+    "cleartext": true
+  }
+}
