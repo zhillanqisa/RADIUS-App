@@ -42,6 +42,17 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
 }
 
+// Sejak Kotlin 1.8, kotlin-stdlib-jdk7/jdk8 digabung ke kotlin-stdlib.
+// Sebagian dependency androidx masih menarik jdk7/jdk8 versi 1.6.21 yang
+// menduplikasi kelas dari stdlib 1.8.22 -> checkDebugDuplicateClasses gagal.
+// Paksa keduanya ke 1.8.22 (versi ini jadi shell kosong yang menunjuk stdlib).
+configurations.all {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+    }
+}
+
 apply from: 'capacitor.build.gradle'
 
 try {
