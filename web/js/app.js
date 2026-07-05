@@ -54,6 +54,13 @@ const els = {
   compareCard: document.getElementById("compare-card"),
   compareGrid: document.getElementById("compare-grid"),
   compareClear: document.getElementById("compare-clear"),
+  menuScreen: document.getElementById("menu-screen"),
+  analysisView: document.getElementById("analysis-view"),
+  costView: document.getElementById("cost-view"),
+  durationDock: document.querySelector(".duration-dock"),
+  miniScore: document.getElementById("mini-score"),
+  miniBand: document.getElementById("mini-band"),
+  miniCaption: document.getElementById("mini-caption"),
 };
 
 const EMPTY_DEFAULTS = {
@@ -62,6 +69,7 @@ const EMPTY_DEFAULTS = {
 };
 
 const state = {
+  view: "menu",  // "menu" | "peta" | "biaya" (hash routing)
   minutes: 15,
   loading: false,
   center: null,
@@ -109,6 +117,30 @@ function setCenterMarker(lat, lon) {
 function isDesktop() {
   return window.matchMedia("(min-width: 901px)").matches;
 }
+
+/* ---------- routing: menu | peta | biaya ---------- */
+
+const VIEW_FOR_HASH = { "#/menu": "menu", "#/peta": "peta", "#/biaya": "biaya" };
+
+function updateCompareVisibility() {
+  els.compareCard.hidden = !(state.view === "biaya" && state.compare.length > 0);
+}
+
+function applyView() {
+  const view = VIEW_FOR_HASH[location.hash] || "menu";
+  state.view = view;
+  els.menuScreen.hidden = view !== "menu";
+  els.durationDock.hidden = view === "menu";
+  els.analysisView.hidden = view !== "peta";
+  els.costView.hidden = view !== "biaya";
+  updateCompareVisibility();
+  if (view !== "menu") {
+    // peta diinisialisasi di balik overlay menu; pastikan ukurannya benar
+    setTimeout(() => map.invalidateSize(), 60);
+  }
+}
+
+window.addEventListener("hashchange", applyView);
 
 /* ---------- state panel ---------- */
 
@@ -213,7 +245,7 @@ function updateCostSummary() {
 /* ---------- perbandingan 2 lokasi ---------- */
 
 function renderCompare() {
-  els.compareCard.hidden = state.compare.length === 0;
+  updateCompareVisibility();
   els.compareGrid.replaceChildren();
   if (state.compare.length === 0) return;
 
@@ -331,6 +363,14 @@ function renderResult(data) {
   els.ringValue.style.left = `${Math.max(0, Math.min(100, data.score))}%`;
 
   els.scoreCached.hidden = !(data.cached && data.source === "live");
+
+  // verdict mini (halaman biaya)
+  els.miniScore.textContent = score;
+  els.miniScore.style.color = bandColor;
+  els.miniBand.textContent = band.label;
+  els.miniBand.style.color = bandColor;
+  els.miniCaption.textContent =
+    `dalam ${data.minutes} menit jalan kaki dari titik terpilih`;
 
   // biaya lokasi (cost_estimate dihitung server; fallback aman kalau absen)
   state.lastScore = score;
@@ -607,4 +647,5 @@ async function init() {
   }
 }
 
+applyView();
 init();

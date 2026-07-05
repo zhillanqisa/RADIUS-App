@@ -11,6 +11,34 @@
 </head>
 <body>
 
+<div id="menu-screen">
+  <div class="menu-inner">
+    <header class="menu-brand">
+      <div class="brand-mark brand-mark-lg" aria-hidden="true"><i></i></div>
+      <h1 class="menu-title">RADIUS</h1>
+      <p class="menu-tag">Skor Kota 15 Menit &middot; Bandung</p>
+      <p class="menu-sub">Seberapa layak-jalan-kaki sebuah lokasi? Dihitung di jaringan jalan pejalan kaki sungguhan, bukan radius lingkaran.</p>
+    </header>
+    <nav class="menu-cards" aria-label="Pilih fitur">
+      <a class="menu-card" href="#/peta">
+        <span class="mc-icon" aria-hidden="true">
+          <svg class="icon"><use href="vendor/icons/sprite.svg#person-simple-walk"></use></svg>
+        </span>
+        <span class="mc-title">Analisis Walkability</span>
+        <span class="mc-desc">Skor 0-100, peta jangkauan jalan kaki, dan rincian fasilitas harian per kategori.</span>
+      </a>
+      <a class="menu-card" href="#/biaya">
+        <span class="mc-icon" aria-hidden="true">
+          <svg class="icon"><use href="vendor/icons/sprite.svg#wallet"></use></svg>
+        </span>
+        <span class="mc-title">Kalkulator Biaya Lokasi</span>
+        <span class="mc-desc">Sewa + estimasi ongkos ojol untuk kebutuhan yang tak terjangkau, dan perbandingan 2 lokasi.</span>
+      </a>
+    </nav>
+    <p class="menu-note">Data: OpenStreetMap &middot; analisis jaringan jalan pejalan kaki (OSMnx)</p>
+  </div>
+</div>
+
 <div class="shell">
 
   <main class="map-wrap">
@@ -44,7 +72,10 @@
           <p class="brand-sub">Skor Kota 15 Menit</p>
         </div>
       </div>
-      <span class="brand-city">Bandung</span>
+      <div class="brand-side">
+        <span class="brand-city">Bandung</span>
+        <a class="back-menu" href="#/menu">Menu</a>
+      </div>
     </header>
 
     <section class="search-block" aria-label="Pencarian lokasi">
@@ -83,6 +114,7 @@
           <p id="notice-demo-text"></p>
         </div>
 
+        <div id="analysis-view">
         <div class="verdict-card">
           <p class="verdict-context" id="score-caption"></p>
           <div class="verdict-main">
@@ -112,7 +144,16 @@
           <span class="breakdown-hint">warna = titik di peta</span>
         </div>
         <ul class="category-list" id="category-list"></ul>
+        </div>
 
+        <div id="cost-view" hidden>
+        <div class="verdict-mini">
+          <span class="vm-score" id="mini-score">0</span>
+          <div class="vm-meta">
+            <p class="vm-band" id="mini-band"></p>
+            <p class="vm-caption" id="mini-caption"></p>
+          </div>
+        </div>
         <div class="cost-card">
           <div class="cost-head">
             <p class="cost-title">Biaya Lokasi Bulanan</p>
@@ -133,6 +174,7 @@
           </div>
           <p class="cost-disclaimer" id="cost-disclaimer"></p>
           <button type="button" class="compare-btn" id="compare-save">Simpan untuk perbandingan</button>
+        </div>
         </div>
 
         <p class="data-note">Data: OpenStreetMap &middot; isochrone dihitung di jaringan jalan pejalan kaki (OSMnx)</p>

@@ -48,8 +48,16 @@ pip install -r requirements.txt
 uvicorn app.server:app --host 127.0.0.1 --port 8000
 ```
 
-Buka <http://127.0.0.1:8000>. Klik titik mana pun di peta, atau cari alamat,
-atau pakai salah satu chip lokasi contoh.
+Buka <http://127.0.0.1:8000> -- aplikasi dibuka ke **halaman menu** dengan dua
+fitur terpisah:
+
+- **Analisis Walkability** (`#/peta`): skor 0-100, isochrone, rincian kategori.
+- **Kalkulator Biaya Lokasi** (`#/biaya`): mandiri -- pilih lokasi + durasi di
+  halaman itu sendiri, masukkan sewa, dapatkan Total Biaya Lokasi + perbandingan
+  2 lokasi.
+
+Di kedua fitur: klik titik mana pun di peta, cari alamat, atau pakai chip
+lokasi contoh. Tombol "Menu" di panel kembali ke halaman menu.
 
 Menjalankan tes:
 

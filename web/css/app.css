@@ -75,6 +75,89 @@ input:focus-visible {
 .icon { width: 18px; height: 18px; fill: currentColor; flex: none; }
 .icon-lg { width: 30px; height: 30px; }
 
+/* ---- menu awal ---- */
+#menu-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;              /* di atas kontrol Leaflet (1000) */
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  overflow-y: auto;
+}
+.menu-inner { max-width: 700px; width: 100%; text-align: center; }
+.menu-brand .brand-mark-lg {
+  width: 54px; height: 54px;
+  margin: 0 auto 14px;
+  border-width: 3px;
+}
+.menu-brand .brand-mark-lg i { width: 14px; height: 14px; }
+.menu-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  line-height: 1.15;
+}
+.menu-tag { margin: 4px 0 10px; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.menu-sub {
+  margin: 0 auto;
+  font-size: 14px;
+  color: var(--ink-3);
+  max-width: 46ch;
+  line-height: 1.55;
+}
+.menu-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 30px 0 20px;
+  text-align: left;
+}
+.menu-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 18px 18px;
+  text-decoration: none;
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(22, 29, 26, 0.06);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.menu-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(22, 29, 26, 0.12);
+}
+.menu-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.menu-card:active { transform: translateY(0) scale(0.99); }
+.mc-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px; height: 42px;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.mc-icon .icon { width: 24px; height: 24px; }
+.mc-title { display: block; font-size: 16px; font-weight: 700; margin: 13px 0 4px; }
+.mc-desc { display: block; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.menu-note { margin: 0; font-size: 11.5px; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .menu-cards { grid-template-columns: 1fr; }
+  .menu-title { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-card, .menu-card:hover, .menu-card:active { transform: none; }
+}
+
 /* ---- shell: peta penuh, panel mengambang ---- */
 .shell { position: relative; height: 100dvh; }
 
@@ -121,6 +204,7 @@ input:focus-visible {
   line-height: 1.2;
 }
 .brand-sub { margin: 0; color: var(--ink-2); font-size: 12.5px; }
+.brand-side { display: flex; align-items: center; gap: 6px; }
 .brand-city {
   font-size: 11.5px;
   font-weight: 600;
@@ -130,6 +214,40 @@ input:focus-visible {
   padding: 3px 8px;
   background: #fff;
 }
+.back-menu {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  background: var(--accent-soft);
+  transition: border-color 0.15s ease;
+}
+.back-menu:hover { border-color: var(--accent); }
+.back-menu:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- verdict mini (halaman biaya) ---- */
+.verdict-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.vm-score {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.vm-meta { min-width: 0; }
+.vm-band { margin: 0; font-size: 13.5px; font-weight: 650; line-height: 1.25; }
+.vm-caption { margin: 1px 0 0; font-size: 11.5px; color: var(--ink-3); }
 
 /* ---- search ---- */
 .search-block { position: relative; }
@@ -263,7 +381,7 @@ input:focus-visible {
 .segmented button:focus-visible { outline-color: #f2f4f0; outline-offset: -2px; }
 
 /* ---- states ---- */
-.results { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.results { display: flex; flex-direction: column; flex: 1; }
 .state { text-align: center; padding: 34px 12px; color: var(--ink-3); margin: auto 0; }
 .state-title {
   margin: 12px 0 4px;
