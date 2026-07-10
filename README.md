@@ -213,6 +213,57 @@ Spesifikasi desain lengkap tampilan mobile ada di `DESIGN-SPEC.md`.
 - **Hasil mobile**: peta besar + bottom sheet dengan handle tarik (snap ke 2
   posisi: ringkas 3 kategori / penuh 7 kategori). Desktop tidak berubah.
 
+## Deploy produksi (Supabase + Render + Vercel)
+
+Arsitektur real: **Vercel** host frontend, **backend FastAPI** (analisis OSMnx)
+di **Render** karena stack geospasial + Overpass 5-30 dtk tak muat di serverless
+Vercel, **Supabase** untuk Postgres (cache hasil + data user) & Auth.
+
+```
+Vercel (web/)  --/api/*-->  Render (FastAPI)  --service key-->  Supabase Postgres
+     |                                                              ^
+     +--------------------- supabase-js (auth, saved) --------------+
+```
+
+Tanpa env Supabase, app tetap jalan pakai cache file lokal (fallback anggun).
+
+### 1. Supabase
+1. Buat project di <https://supabase.com>.
+2. SQL Editor → tempel & jalankan `supabase/migrations/0001_init.sql`
+   (buat tabel `analysis_cache`, `profiles`, `saved_locations`,
+   `analysis_history` + RLS).
+3. Settings → API: catat **Project URL**, **anon key**, **service_role key**.
+4. (Opsional) Authentication → Providers: aktifkan Email dan/atau Google.
+
+### 2. Backend → Render
+1. Push repo ke GitHub.
+2. Render → New → **Blueprint** → pilih repo (`render.yaml` terbaca otomatis;
+   pakai `Dockerfile`).
+3. Isi env di dashboard (jangan commit): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
+   `SUPABASE_ANON_KEY`, dan `RADIUS_CORS_ORIGINS` = URL Vercel-mu nanti.
+4. Deploy → catat URL, mis. `https://radius-backend.onrender.com`.
+5. (Opsional) isi Supabase dengan data demo pra-hitung:
+   `SUPABASE_URL=... SUPABASE_SERVICE_KEY=... python scripts/seed_supabase.py`.
+
+### 3. Frontend → Vercel
+1. Edit `vercel.json` → ganti `destination` rewrite ke URL backend Render-mu.
+2. Vercel → Import repo. Framework: **Other**; Output dir: `web` (sudah di
+   `vercel.json`). Deploy.
+3. Setelah dapat URL Vercel, tambahkan ke `RADIUS_CORS_ORIGINS` backend Render.
+
+### Keamanan
+- **service_role key** hanya di backend (Render env). JANGAN commit / kirim ke
+  browser — key ini mem-bypass RLS.
+- **anon key** aman diekspos ke frontend (dilindungi RLS); backend
+  meneruskannya lewat `/api/config`.
+- `.env` sudah di `.gitignore`.
+
+### Status fitur
+- Cache hasil di Supabase Postgres (backend, dengan fallback file lokal) - siap.
+- Config deploy Vercel + Render + Docker + skema Auth/RLS lengkap - siap.
+- UI akun (login, simpan lokasi, riwayat) via supabase-js di frontend - skema DB
+  sudah siap; lapisan UI menyusul.
+
 ## Konfigurasi
 
 Salin `.env.example` ke `.env` untuk mengubah kecepatan jalan, timeout

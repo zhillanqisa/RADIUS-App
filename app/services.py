@@ -16,8 +16,14 @@ from typing import Any
 from shapely.geometry import mapping
 
 from app import cache
+from app.config import settings
 from app.costs import estimate_extra_costs
 from radius_core import RadiusResult, analyze_location, generate_demo_data
+
+try:
+    from app import supabase_store
+except Exception:  # pragma: no cover - modul opsional
+    supabase_store = None
 
 logger = logging.getLogger("radius.services")
 
@@ -93,15 +99,27 @@ def analyze(lat: float, lon: float, minutes: int) -> dict[str, Any]:
 
     Order: result cache -> live OSMnx/Overpass -> demo fallback.
     """
+    # Urutan cache: Supabase (dibagi antar perangkat) -> file lokal.
+    if settings.use_supabase and supabase_store is not None:
+        remote = supabase_store.get(lat, lon, minutes)
+        if remote is not None:
+            logger.info("Supabase hit for (%.4f, %.4f, %d min).", lat, lon, minutes)
+            return _with_cost({**remote, "cached": True})
+
     cached = cache.get(lat, lon, minutes)
     if cached is not None:
-        logger.info("Cache hit for (%.4f, %.4f, %d min).", lat, lon, minutes)
+        logger.info("File cache hit for (%.4f, %.4f, %d min).", lat, lon, minutes)
+        # naikkan ke Supabase supaya perangkat lain ikut instan
+        if settings.use_supabase and supabase_store is not None:
+            supabase_store.put(lat, lon, minutes, cached)
         return _with_cost({**cached, "cached": True})
 
     try:
         result = analyze_location(lat, lon, minutes=minutes)
         payload = serialize_result(result, source="live")
         cache.put(lat, lon, minutes, payload)
+        if settings.use_supabase and supabase_store is not None:
+            supabase_store.put(lat, lon, minutes, payload)
         return _with_cost({**payload, "cached": False})
     except Exception:
         logger.exception(

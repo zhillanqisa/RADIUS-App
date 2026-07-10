@@ -1,0 +1,12 @@
+.venv/
+.git/
+android/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/osmnx_cache/
+.env
+tests/
+scratchpad/
+DESIGN-SPEC.md

@@ -99,5 +99,25 @@ class Settings:
     host: str = os.environ.get("RADIUS_HOST", "127.0.0.1")
     port: int = _env_int("RADIUS_PORT", 8000)
 
+    # --- Supabase (opsional) ------------------------------------------------
+    # Kalau URL + service key diisi, hasil analisis di-cache di Postgres
+    # Supabase (dibagi antar perangkat & jadi sumber data untuk deploy).
+    # Kalau kosong, otomatis jatuh ke cache file lokal -- app tetap jalan.
+    supabase_url: str = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    supabase_service_key: str = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    # Anon key + URL diserahkan ke frontend lewat /api/config untuk auth
+    # (supabase-js). Anon key aman diekspos (dilindungi RLS); service key TIDAK.
+    supabase_anon_key: str = os.environ.get("SUPABASE_ANON_KEY", "")
+    supabase_timeout_s: int = _env_int("SUPABASE_TIMEOUT_S", 8)
+
+    # CORS: origin frontend yang diizinkan (Vercel). Koma-pisah, atau "*".
+    # Dipakai saat frontend (Vercel) dan backend (Render) beda origin.
+    cors_origins: str = os.environ.get("RADIUS_CORS_ORIGINS", "")
+
+    @property
+    def use_supabase(self) -> bool:
+        """True kalau cache Supabase aktif (URL + service key terpasang)."""
+        return bool(self.supabase_url and self.supabase_service_key)
+
 
 settings = Settings()

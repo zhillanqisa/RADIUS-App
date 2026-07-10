@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import services
@@ -28,6 +29,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS: dipakai saat frontend (Vercel) & backend (Render) beda origin.
+# Kalau RADIUS_CORS_ORIGINS kosong, CORS tidak dipasang (deploy same-origin).
+if settings.cors_origins:
+    _origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origins,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
@@ -43,6 +55,12 @@ def client_config() -> dict[str, object]:
         "default_minutes": settings.default_minutes,
         "allowed_minutes": list(settings.allowed_minutes),
         "demo_locations": services.DEMO_LOCATIONS,
+        # Diserahkan ke frontend untuk auth supabase-js. Anon key aman diekspos
+        # (dilindungi RLS). Kosong => fitur akun dimatikan di UI.
+        "supabase": {
+            "url": settings.supabase_url,
+            "anon_key": settings.supabase_anon_key,
+        },
     }
 
 
