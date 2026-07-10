@@ -1,19 +1,24 @@
-# Render Blueprint untuk backend RADIUS (FastAPI + OSMnx).
+# Render Blueprint untuk RADIUS (FastAPI melayani frontend + /api sekaligus).
 # Deploy: push repo ke GitHub -> Render -> "New +" -> "Blueprint" -> pilih repo.
-# Isi env SUPABASE_* + RADIUS_CORS_ORIGINS di dashboard (jangan commit secret).
+# Satu layanan ini = SELURUH app (peta + API). Tidak perlu Vercel.
+# Isi 3 env SUPABASE_* di dashboard (jangan commit secret).
 services:
   - type: web
-    name: radius-backend
+    name: radius-app
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter          # free tier bisa "sleep"; starter tetap hidup
+    # free = gratis tapi "tidur" setelah 15 menit idle (request pertama ~1 menit).
+    # Ganti ke "starter" (berbayar) supaya selalu hidup untuk demo/produksi.
+    plan: free
     healthCheckPath: /api/health
     envVars:
-      - key: RADIUS_CORS_ORIGINS
-        sync: false        # mis. https://radius.vercel.app
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
       - key: SUPABASE_ANON_KEY
+        sync: false
+      # CORS tidak perlu di setup Render-only (frontend & API satu origin).
+      # Isi hanya kalau kamu pisah frontend ke Vercel.
+      - key: RADIUS_CORS_ORIGINS
         sync: false
