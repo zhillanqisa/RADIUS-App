@@ -530,13 +530,23 @@ function renderResult(data, opts) {
       fillOpacity: 0.95,
     })
       .bindPopup(
-        `<div class="poi-popup"><span class="poi-name"></span><span class="poi-cat"></span></div>`
+        `<div class="poi-popup">
+           <span class="poi-name"></span>
+           <span class="poi-cat"></span>
+           <div class="poi-actions">
+             <button type="button" class="poi-dir" data-origin="point">
+               <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#navigation-arrow"></use></svg>
+               <span class="poi-dir-label"></span>
+             </button>
+             <button type="button" class="poi-dir" data-origin="gps">
+               <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#crosshair-simple"></use></svg>
+               <span class="poi-dir-label"></span>
+             </button>
+           </div>
+           <p class="poi-msg" hidden></p>
+         </div>`
       )
-      .on("popupopen", (e) => {
-        const node = e.popup.getElement();
-        node.querySelector(".poi-name").textContent = poi.name;
-        node.querySelector(".poi-cat").textContent = t(meta.labelKey);
-      })
+      .on("popupopen", (e) => wirePoiPopup(e.popup.getElement(), poi, meta))
       .addTo(poiLayer);
   }
 
@@ -570,6 +580,91 @@ function renderResult(data, opts) {
   // Saat fallback demo aktif, jangan memicu 3 percobaan Overpass tambahan.
   setDurationScore(data.minutes, score);
   if (refetchDock && !isDemo) fetchOtherDurations(state.center);
+}
+
+/* ---------- arahin POI (Google Maps jalan kaki) ---------- */
+
+// Ambil lokasi GPS perangkat. Promise -> {lat, lon} atau reject dgn kode ramah.
+// Di app Android (Capacitor) pakai plugin native @capacitor/geolocation yang
+// meminta izin runtime sendiri; WebView navigator.geolocation ditolak Capacitor.
+// Di browser biasa jatuh ke navigator.geolocation.
+async function getUserLocation() {
+  const cap = window.Capacitor;
+  const geo = cap && cap.Plugins && cap.Plugins.Geolocation;
+  if (geo && cap.isNativePlatform && cap.isNativePlatform()) {
+    try {
+      if (geo.checkPermissions && geo.requestPermissions) {
+        let perm = await geo.checkPermissions();
+        const granted = (p) => p.location === "granted" || p.coarseLocation === "granted";
+        if (!granted(perm)) perm = await geo.requestPermissions();
+        if (!granted(perm)) throw "denied";
+      }
+      const pos = await geo.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
+      return { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    } catch (e) {
+      if (e === "denied") throw "denied";
+      const m = String((e && e.message) || e || "").toLowerCase();
+      throw m.includes("den") ? "denied" : "fail";
+    }
+  }
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject("fail");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (err) => reject(err && err.code === 1 ? "denied" : "fail"),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  });
+}
+
+function openDirections(origin, poi) {
+  const url =
+    "https://www.google.com/maps/dir/?api=1" +
+    `&origin=${origin.lat},${origin.lon}` +
+    `&destination=${poi.lat},${poi.lon}` +
+    "&travelmode=walking";
+  // URL off-origin -> Capacitor membukanya di app/browser sistem (Maps).
+  window.open(url, "_blank");
+}
+
+function wirePoiPopup(node, poi, meta) {
+  node.querySelector(".poi-name").textContent = poi.name;
+  node.querySelector(".poi-cat").textContent = t(meta.labelKey);
+  const labels = node.querySelectorAll(".poi-dir-label");
+  labels[0].textContent = t("poi.dirFromPoint");
+  labels[1].textContent = t("poi.dirFromGps");
+  const msg = node.querySelector(".poi-msg");
+  const setMsg = (text) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+  };
+  setMsg("");
+
+  const btnPoint = node.querySelector('.poi-dir[data-origin="point"]');
+  const btnGps = node.querySelector('.poi-dir[data-origin="gps"]');
+
+  // "dari titik ini" perlu titik analisis aktif
+  btnPoint.disabled = !state.center;
+  btnPoint.addEventListener("click", () => {
+    if (state.center) openDirections(state.center, poi);
+  });
+
+  btnGps.addEventListener("click", async () => {
+    setMsg(t("poi.locating"));
+    btnGps.disabled = true;
+    try {
+      const coords = await getUserLocation();
+      setMsg("");
+      openDirections(coords, poi);
+    } catch (code) {
+      setMsg(t(code === "denied" ? "poi.locDenied" : "poi.locFail"));
+    } finally {
+      btnGps.disabled = false;
+    }
+  });
 }
 
 /* ---------- API ---------- */

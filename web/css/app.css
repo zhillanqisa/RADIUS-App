@@ -952,8 +952,42 @@ input:focus-visible {
   box-shadow: 0 8px 24px rgba(22, 29, 26, 0.18);
 }
 .leaflet-popup-content { margin: 12px 14px; font-size: 13px; }
+.poi-popup { min-width: 184px; }
 .poi-popup .poi-name { font-weight: 600; display: block; }
 .poi-popup .poi-cat { color: var(--ink-3); font-size: 12px; }
+.poi-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.poi-dir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.poi-dir:hover { border-color: var(--accent); }
+.poi-dir:active { transform: scale(0.98); }
+.poi-dir:disabled { opacity: 0.5; cursor: default; }
+.poi-dir .icon { width: 16px; height: 16px; }
+.poi-msg {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--warn-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .poi-dir:active { transform: none; }
+}
 
 .leaflet-bar {
   border: 1px solid var(--line) !important;
