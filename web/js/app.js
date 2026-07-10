@@ -292,7 +292,12 @@ function renderCost(est) {
     li.innerHTML = `<svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#info"></use></svg>
       <span><span class="note-cat"></span> <span class="note-text"></span></span>`;
     li.querySelector(".note-cat").textContent = catLabel(note.category) + ":";
-    li.querySelector(".note-text").textContent = note.note;
+    // teks catatan diterjemahkan dari kamus (server hanya kirim key kategori);
+    // fallback ke teks server jika kunci belum ada.
+    const noteKey = "cost.note." + note.category;
+    const translated = t(noteKey);
+    li.querySelector(".note-text").textContent =
+      translated === noteKey ? note.note : translated;
     els.costNotes.appendChild(li);
   }
 
