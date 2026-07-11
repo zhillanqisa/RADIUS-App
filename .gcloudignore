@@ -1,0 +1,14 @@
+# File yang TIDAK diunggah saat `gcloud run deploy --source .`
+# (build lebih cepat; Dockerfile tetap pakai .dockerignore untuk konteks build).
+.git/
+.venv/
+node_modules/
+android/
+tests/
+scratchpad/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/osmnx_cache/
+.env
+DESIGN-SPEC.md

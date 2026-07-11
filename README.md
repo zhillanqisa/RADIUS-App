@@ -270,7 +270,35 @@ Tanpa env Supabase, app tetap jalan pakai cache file lokal (fallback anggun).
 3. Settings → API: catat **Project URL**, **anon key**, **service_role key**.
 4. (Opsional) Authentication → Providers: aktifkan Email dan/atau Google.
 
-### 2. Backend → Hugging Face Spaces (tanpa kartu, direkomendasikan)
+### 2. Backend → Google Cloud Run (full + 24/7, free tier $0)
+App penuh (analisis live) selalu online tanpa PC. Free tier Cloud Run sangat
+besar (2 jt request/bln) -- pemakaian pribadi tetap $0. Butuh kartu HANYA
+untuk verifikasi akun (tidak ditagih selama scale-to-zero + pemakaian kecil).
+Dockerfile sudah listen di `$PORT` yang Cloud Run inject.
+
+**Cara termudah (Console, tanpa install apa pun):**
+1. <https://console.cloud.google.com> → login → buat **Project** baru
+   (mis. `radius`). Aktifkan **Billing** (masukkan kartu -- verifikasi saja).
+2. Cari **Cloud Run** → **Deploy container** → **Continuously deploy from a
+   repository** → **Set up with Cloud Build** → pilih GitHub repo
+   `zhillanqisa/RADIUS-App`, branch `main`, **Build Type: Dockerfile**.
+3. Setelan service: **Region** `asia-southeast2` (Jakarta), **Authentication:
+   Allow unauthenticated**, **Memory: 2 GiB** (penting -- 512 MB bisa OOM di
+   isochrone besar), **Request timeout: 300**, **Min instances: 0** (biar $0).
+4. (Opsional) Variables & Secrets → tambah `SUPABASE_URL`,
+   `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY`.
+5. **Create/Deploy** → build ~5-8 menit → dapat URL
+   `https://radius-xxxx.a.run.app`. Itu URL app-mu (untuk PWA & APK).
+
+**Alternatif CLI (kalau punya gcloud):**
+`gcloud run deploy radius --source . --region asia-southeast2 \
+  --allow-unauthenticated --memory 2Gi --timeout 300`
+
+Catatan biaya: dengan **Min instances 0**, service "tidur" saat tak dipakai
+(request pertama ~10-30 dtk) dan biaya $0. Jangan set min-instances >0 (itu
+bikin selalu-nyala tapi mulai berbayar).
+
+### 2-alt. Backend → Hugging Face Spaces (Docker kini BERBAYAR)
 Render minta kartu. HF Spaces gratis tanpa kartu, RAM 16 GB (cukup untuk
 isochrone besar), pakai `Dockerfile` yang sama. App tetap jalan tanpa
 Supabase (fallback cache file + 3 lokasi demo sudah di-bundle).
