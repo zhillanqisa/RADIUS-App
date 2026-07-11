@@ -15,7 +15,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Render/Railway menyuntik $PORT. Default 8000 untuk lokal.
+# Folder cache harus writable oleh user non-root (Hugging Face Spaces
+# menjalankan container sebagai UID 1000). data/cache berisi demo pinned.
+RUN mkdir -p /app/data/cache /app/data/osmnx_cache && chmod -R 777 /app/data
+
+# Host inject $PORT (Render/Koyeb). Hugging Face route ke app_port (README).
 ENV RADIUS_HOST=0.0.0.0
 ENV PORT=8000
 EXPOSE 8000

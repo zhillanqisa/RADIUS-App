@@ -1,3 +1,15 @@
+---
+title: RADIUS
+emoji: "\U0001F5FA"
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
+<!-- Header di atas dipakai Hugging Face Spaces (Docker). Diabaikan tempat lain. -->
+
 # RADIUS — Skor Kota 15 Menit
 
 RADIUS mengukur seberapa layak-jalan-kaki satu titik lokasi: seberapa lengkap
@@ -258,7 +270,22 @@ Tanpa env Supabase, app tetap jalan pakai cache file lokal (fallback anggun).
 3. Settings → API: catat **Project URL**, **anon key**, **service_role key**.
 4. (Opsional) Authentication → Providers: aktifkan Email dan/atau Google.
 
-### 2. Backend → Render
+### 2. Backend → Hugging Face Spaces (tanpa kartu, direkomendasikan)
+Render minta kartu. HF Spaces gratis tanpa kartu, RAM 16 GB (cukup untuk
+isochrone besar), pakai `Dockerfile` yang sama. App tetap jalan tanpa
+Supabase (fallback cache file + 3 lokasi demo sudah di-bundle).
+1. <https://huggingface.co> → daftar → **New Space** → SDK **Docker** →
+   visibilitas **Public** (biar teman bisa buka lewat link).
+2. Space punya git repo sendiri. Dari folder ini:
+   `git remote add space https://huggingface.co/spaces/<user>/radius`
+   lalu `git push space main`. HF baca header README (`sdk: docker`,
+   `app_port: 8000`) + build Dockerfile otomatis (~5 menit).
+3. (Opsional) Space → Settings → **Secrets**: tambah `SUPABASE_URL`,
+   `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY` untuk cache bersama + akun.
+4. URL: `https://<user>-radius.hf.space` → itu URL app-mu untuk PWA & APK.
+   (Space "tidur" setelah ~48 jam idle; bangun ~30 dtk saat dibuka.)
+
+### 2b. Backend → Render (butuh kartu)
 1. Push repo ke GitHub.
 2. Render → New → **Blueprint** → pilih repo (`render.yaml` terbaca otomatis;
    pakai `Dockerfile`).
