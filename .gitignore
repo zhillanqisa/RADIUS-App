@@ -22,6 +22,9 @@ Thumbs.db
 # claude code local state
 .claude/settings.local.json
 
+# cloudflared binary + tunnel log (besar, lokal)
+tools/
+
 # node / capacitor (android/ shell IS tracked; deps are not)
 node_modules/
 android/.gradle/
