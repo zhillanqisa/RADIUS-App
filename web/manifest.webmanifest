@@ -1,0 +1,17 @@
+{
+  "name": "RADIUS - Skor Kota 15 Menit",
+  "short_name": "RADIUS",
+  "description": "Seberapa layak-jalan-kaki lokasimu? Skor 0-100 di jaringan jalan sungguhan.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#124f5c",
+  "background_color": "#f4f6f4",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

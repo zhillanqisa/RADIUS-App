@@ -213,6 +213,29 @@ Spesifikasi desain lengkap tampilan mobile ada di `DESIGN-SPEC.md`.
 - **Hasil mobile**: peta besar + bottom sheet dengan handle tarik (snap ke 2
   posisi: ringkas 3 kategori / penuh 7 kategori). Desktop tidak berubah.
 
+## Pakai di HP
+
+Setelah backend live di URL publik (lihat Deploy di bawah), ada dua cara
+memakai RADIUS di HP:
+
+### 1. PWA (buka link → jadi seperti app)
+1. Buka URL app di **Chrome HP** (mis. `https://radius-app.onrender.com`).
+2. Menu (titik tiga) → **Tambah ke Layar utama** / "Install app".
+3. Muncul ikon RADIUS di layar utama; buka → layar penuh (tanpa address bar),
+   auto-update tiap ada perubahan. Tanpa install APK, tanpa Play Store.
+   (iPhone: Safari → Share → "Add to Home Screen".)
+
+### 2. APK Android (app native)
+File `app-debug.apk` di-install langsung:
+1. Pastikan `capacitor.config.json` `server.url` menunjuk URL backend publik
+   (bukan `10.0.2.2` yang khusus emulator), lalu rebuild:
+   `npx cap sync android && cd android && ./gradlew assembleDebug`.
+2. Transfer `android/app/build/outputs/apk/debug/app-debug.apk` ke HP.
+3. Buka file → HP minta izin "install dari sumber tak dikenal" → izinkan →
+   Install. GPS & "arahin" jalan lewat plugin native.
+   (Debug APK menampilkan "developer tak dikenal" -- normal untuk sideload;
+   signing hanya perlu kalau mau ke Play Store.)
+
 ## Deploy produksi (Supabase + Render + Vercel)
 
 Arsitektur real: **Vercel** host frontend, **backend FastAPI** (analisis OSMnx)
