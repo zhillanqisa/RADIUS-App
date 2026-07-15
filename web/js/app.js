@@ -227,6 +227,10 @@ function setPois(pois) {
 // map "load" dan tiap kali "styledata" setelah setStyle (swap tema membuang
 // semua custom layer, jadi dipasang ulang di sini).
 function addCustomLayers() {
+  // Guard: styledata bisa terpicu sebelum style baru selesai (mis. saat toggle
+  // tema cepat berturut-turut) — map.getStyle() sementara undefined dan
+  // firstSymbolId() akan throw. Tunda ke "idle" sampai style + source siap.
+  if (!map.isStyleLoaded()) { map.once("idle", addCustomLayers); return; }
   const before = firstSymbolId();
   if (map.getLayer("building-3d")) map.setLayoutProperty("building-3d", "visibility", "none");
 
