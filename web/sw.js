@@ -3,7 +3,7 @@
    stale-cache). Cache dipakai HANYA sebagai cadangan offline aset shell. */
 "use strict";
 
-const CACHE = "radius-shell-v1";
+const CACHE = "radius-shell-v2";
 
 // Aset shell yang aman di-cache (vendor lokal jarang berubah).
 const SHELL = [
@@ -12,8 +12,8 @@ const SHELL = [
   "/css/app.css",
   "/js/i18n.js",
   "/js/app.js",
-  "/vendor/leaflet/leaflet.css",
-  "/vendor/leaflet/leaflet.js",
+  "/vendor/maplibre/maplibre-gl.css",
+  "/vendor/maplibre/maplibre-gl.js",
   "/vendor/fonts/outfit-variable.woff2",
   "/vendor/icons/sprite.svg",
   "/manifest.webmanifest",
@@ -40,7 +40,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
 
   // JANGAN cache API atau tile peta (selalu live).
-  if (url.pathname.startsWith("/api/") || url.hostname.includes("cartocdn")) {
+  if (url.pathname.startsWith("/api/") || url.hostname.includes("openfreemap")) {
     return; // biarkan default (network)
   }
 
