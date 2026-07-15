@@ -945,13 +945,29 @@ input:focus-visible {
   .demo-chips button:active { transform: none; }
 }
 
-/* ---- map furniture ---- */
-.leaflet-container { font-family: inherit; }
-.leaflet-popup-content-wrapper {
+/* ---- map furniture (MapLibre) ---- */
+.maplibregl-map { font-family: inherit; }
+
+.maplibregl-popup-content {
   border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(22, 29, 26, 0.18);
+  padding: 12px 14px;
+  background: var(--card);
 }
-.leaflet-popup-content { margin: 12px 14px; font-size: 13px; }
+.maplibregl-popup-close-button {
+  font-size: 17px;
+  color: var(--ink-3);
+  padding: 0 6px;
+}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: var(--card); }
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip { border-top-color: var(--card); }
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--card); }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--card); }
+
 .poi-popup { min-width: 184px; }
 .poi-popup .poi-name { font-weight: 600; display: block; }
 .poi-popup .poi-cat { color: var(--ink-3); font-size: 12px; }
@@ -989,19 +1005,16 @@ input:focus-visible {
   .poi-dir:active { transform: none; }
 }
 
-.leaflet-bar {
+.maplibregl-ctrl-group {
   border: 1px solid var(--line) !important;
   border-radius: var(--radius) !important;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(22, 29, 26, 0.10) !important;
+  background: var(--card);
 }
-.leaflet-bar a { color: var(--ink-2) !important; }
-
-.iso-shape { animation: iso-in 0.5s ease both; }
-@keyframes iso-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-  .iso-shape { animation: none; }
-}
+.maplibregl-ctrl-group button { background: var(--card); }
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--line); }
+.maplibregl-ctrl-attribution { font-size: 10px; }
 
 .center-pin {
   width: 18px; height: 18px;
