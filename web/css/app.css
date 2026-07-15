@@ -953,6 +953,7 @@ input:focus-visible {
   box-shadow: 0 8px 24px rgba(22, 29, 26, 0.18);
   padding: 12px 14px;
   background: var(--card);
+  color: var(--ink);
 }
 .maplibregl-popup-close-button {
   font-size: 17px;
