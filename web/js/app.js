@@ -1,4 +1,4 @@
-/* RADIUS frontend v3: Leaflet map + panel/bottom-sheet, hash routing,
+/* RADIUS frontend v3: MapLibre GL map + panel/bottom-sheet, hash routing,
    dark mode (data-theme + prefers-color-scheme), i18n ID/EN (js/i18n.js).
    Vanilla JS, tanpa build step. Kontrak API & id elemen tidak berubah. */
 "use strict";
@@ -23,8 +23,12 @@ const DURATIONS = [5, 10, 15, 20];
 
 const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const TILE_LIGHT = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const TILE_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty";
+const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+const EMPTY_FC = { type: "FeatureCollection", features: [] };
+// warna balok gedung 3D (di-refresh saat re-add layer pada ganti tema)
+const BUILDING_LIGHT = "#c9ccce";
+const BUILDING_DARK = "#3a4550";
 
 const els = {
   searchInput: document.getElementById("search-input"),
@@ -105,7 +109,12 @@ function isDark() {
 }
 
 function applyTheme() {
-  tileLayer.setUrl(isDark() ? TILE_DARK : TILE_LIGHT);
+  const target = isDark() ? STYLE_DARK : STYLE_LIGHT;
+  if (typeof map !== "undefined" && map.__styleUrl !== target) {
+    map.__styleUrl = target;
+    map.setStyle(target);
+    map.once("styledata", addCustomLayers); // custom layer dibuang saat swap; pasang ulang
+  }
   // warna inline (band, ikon kategori) dibaca dari CSS var saat render;
   // render ulang hasil terakhir supaya ikut tema baru.
   if (state.lastData) renderResult(state.lastData, { refetchDock: false });
@@ -152,35 +161,182 @@ function refreshLanguage() {
 
 /* ---------- map ---------- */
 
-const map = L.map("map", { zoomControl: false }).setView([-6.9147, 107.6098], 15);
-L.control.zoom({ position: "bottomright" }).addTo(map);
+const map = new maplibregl.Map({
+  container: "map",
+  style: isDark() ? STYLE_DARK : STYLE_LIGHT,
+  center: [107.6098, -6.9147], // [lng, lat]
+  zoom: 15,
+  pitch: 45,
+  bearing: 0,
+  attributionControl: true,
+});
+map.__styleUrl = isDark() ? STYLE_DARK : STYLE_LIGHT;
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
 
-const tileLayer = L.tileLayer(TILE_LIGHT, {
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  subdomains: "abcd",
-  maxZoom: 19,
-}).addTo(map);
+function firstSymbolId() {
+  for (const l of map.getStyle().layers) if (l.type === "symbol") return l.id;
+  return undefined;
+}
 
-const isochroneLayer = L.layerGroup().addTo(map);
-const poiLayer = L.layerGroup().addTo(map);
-let centerMarker = null;
+function circleColorExpr() {
+  const expr = ["match", ["get", "category"]];
+  for (const [key, meta] of Object.entries(CATEGORY_META)) expr.push(key, cssVal(meta.cssVar));
+  expr.push("#888888"); // fallback
+  return expr;
+}
 
+function poiFeatures(pois) {
+  return {
+    type: "FeatureCollection",
+    features: (pois || [])
+      .filter((p) => CATEGORY_META[p.category])
+      .map((p) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+        properties: { category: p.category, name: p.name, lat: p.lat, lon: p.lon },
+      })),
+  };
+}
+
+// bbox [[minLng,minLat],[maxLng,maxLat]] dari geometri isochrone (Polygon/MultiPolygon)
+function geomBounds(geometry) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const walk = (c) => {
+    if (typeof c[0] === "number") {
+      if (c[0] < minX) minX = c[0];
+      if (c[1] < minY) minY = c[1];
+      if (c[0] > maxX) maxX = c[0];
+      if (c[1] > maxY) maxY = c[1];
+    } else for (const x of c) walk(x);
+  };
+  walk(geometry.coordinates);
+  return [[minX, minY], [maxX, maxY]];
+}
+
+function setIsochrone(geometry) {
+  const src = map.getSource("iso");
+  if (src) src.setData({ type: "Feature", geometry, properties: {} });
+}
+
+function setPois(pois) {
+  const src = map.getSource("poi");
+  if (src) src.setData(poiFeatures(pois));
+}
+
+// Pasang gedung 3D + sumber/lapisan isochrone & POI. Idempotent; dipanggil saat
+// map "load" dan tiap kali "styledata" setelah setStyle (swap tema membuang
+// semua custom layer, jadi dipasang ulang di sini).
+function addCustomLayers() {
+  const before = firstSymbolId();
+  if (map.getLayer("building-3d")) map.setLayoutProperty("building-3d", "visibility", "none");
+
+  if (!map.getLayer("radius-buildings")) {
+    map.addLayer({
+      id: "radius-buildings",
+      type: "fill-extrusion",
+      source: "openmaptiles",
+      "source-layer": "building",
+      filter: ["has", "render_height"],
+      minzoom: 13,
+      paint: {
+        "fill-extrusion-color": isDark() ? BUILDING_DARK : BUILDING_LIGHT,
+        "fill-extrusion-height": ["get", "render_height"],
+        "fill-extrusion-base": ["get", "render_min_height"],
+        "fill-extrusion-opacity": 0.85,
+      },
+    }, before);
+  }
+
+  const accent = cssVal("--accent");
+  if (!map.getSource("iso")) map.addSource("iso", { type: "geojson", data: EMPTY_FC });
+  if (!map.getLayer("iso-fill"))
+    map.addLayer({ id: "iso-fill", type: "fill", source: "iso", paint: { "fill-color": accent, "fill-opacity": 0.13 } }, before);
+  if (!map.getLayer("iso-line"))
+    map.addLayer({ id: "iso-line", type: "line", source: "iso", paint: { "line-color": accent, "line-width": 2 } }, before);
+
+  if (!map.getSource("poi")) map.addSource("poi", { type: "geojson", data: EMPTY_FC });
+  if (!map.getLayer("poi-circles"))
+    map.addLayer({
+      id: "poi-circles",
+      type: "circle",
+      source: "poi",
+      paint: {
+        "circle-radius": 6,
+        "circle-color": circleColorExpr(),
+        "circle-stroke-width": 1.5,
+        "circle-stroke-color": isDark() ? "#1c2823" : "#ffffff",
+      },
+    });
+
+  // setelah swap tema, kembalikan data terakhir supaya peta tak kosong
+  if (state.lastData) {
+    setIsochrone(state.lastData.isochrone);
+    setPois(state.lastData.pois);
+  }
+}
+
+map.on("load", addCustomLayers);
+
+// POI popup: 2 tombol "arahin" (dari titik / GPS) -> Google Maps jalan kaki.
+const POI_POPUP_HTML = `<div class="poi-popup">
+   <span class="poi-name"></span>
+   <span class="poi-cat"></span>
+   <div class="poi-actions">
+     <button type="button" class="poi-dir" data-origin="point">
+       <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#navigation-arrow"></use></svg>
+       <span class="poi-dir-label"></span>
+     </button>
+     <button type="button" class="poi-dir" data-origin="gps">
+       <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#crosshair-simple"></use></svg>
+       <span class="poi-dir-label"></span>
+     </button>
+   </div>
+   <p class="poi-msg" hidden></p>
+ </div>`;
+
+map.on("click", "poi-circles", (e) => {
+  const f = e.features && e.features[0];
+  if (!f) return;
+  const p = f.properties;
+  const meta = CATEGORY_META[p.category];
+  if (!meta) return;
+  const poi = { name: p.name, category: p.category, lat: Number(p.lat), lon: Number(p.lon) };
+  const wrap = document.createElement("div");
+  wrap.innerHTML = POI_POPUP_HTML;
+  const node = wrap.firstElementChild;
+  new maplibregl.Popup({ offset: 14 }).setLngLat(e.lngLat).setDOMContent(node).addTo(map);
+  wirePoiPopup(node, poi, meta);
+});
+map.on("mouseenter", "poi-circles", () => { map.getCanvas().style.cursor = "pointer"; });
+map.on("mouseleave", "poi-circles", () => { map.getCanvas().style.cursor = ""; });
+
+// pilih titik analisis dengan klik peta (abaikan klik yang mengenai POI)
 map.on("click", (e) => {
   if (state.loading) return;
-  state.locationLabel = t("map.point", {
-    lat: e.latlng.lat.toFixed(4),
-    lon: e.latlng.lng.toFixed(4),
-  });
-  runAnalysis(e.latlng.lat, e.latlng.lng);
+  if (map.getLayer("poi-circles") &&
+      map.queryRenderedFeatures(e.point, { layers: ["poi-circles"] }).length) return;
+  state.locationLabel = t("map.point", { lat: e.lngLat.lat.toFixed(4), lon: e.lngLat.lng.toFixed(4) });
+  runAnalysis(e.lngLat.lat, e.lngLat.lng);
 });
 
+let centerMarker = null;
 function setCenterMarker(lat, lon) {
   if (centerMarker) centerMarker.remove();
-  centerMarker = L.marker([lat, lon], {
-    icon: L.divIcon({ className: "", html: '<div class="center-pin"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }),
-    interactive: false,
-  }).addTo(map);
+  const el = document.createElement("div");
+  el.className = "center-pin";
+  centerMarker = new maplibregl.Marker({ element: el, anchor: "center" })
+    .setLngLat([lon, lat])
+    .addTo(map);
+}
+
+function fitIsochrone(geometry) {
+  const b = geomBounds(geometry);
+  let padding;
+  if (isDesktop()) padding = { top: 84, left: 462, right: 40, bottom: 40 };
+  else if (state.view === "peta")
+    padding = { top: 132, left: 24, right: 24, bottom: Math.round(window.innerHeight * 0.44) };
+  else padding = { top: 26, right: 26, bottom: 26, left: 26 };
+  map.fitBounds(b, { padding, duration: REDUCED_MOTION ? 0 : 600 });
 }
 
 function isDesktop() {
@@ -207,7 +363,7 @@ function applyView() {
   updateCompareVisibility();
   if (view !== "menu") {
     // peta diinisialisasi di balik overlay menu; pastikan ukurannya benar
-    setTimeout(() => map.invalidateSize(), 60);
+    setTimeout(() => map.resize(), 60);
   }
 }
 
@@ -510,64 +666,11 @@ function renderResult(data, opts) {
     els.categoryList.appendChild(li);
   });
 
-  // layer peta
-  isochroneLayer.clearLayers();
-  poiLayer.clearLayers();
-  const accent = cssVal("--accent");
-  const iso = L.geoJSON(
-    { type: "Feature", geometry: data.isochrone },
-    { style: { color: accent, weight: 2, fillColor: accent, fillOpacity: 0.13, className: "iso-shape" } }
-  ).addTo(isochroneLayer);
-
-  for (const poi of data.pois) {
-    const meta = CATEGORY_META[poi.category];
-    if (!meta) continue;
-    L.circleMarker([poi.lat, poi.lon], {
-      radius: 6,
-      color: isDark() ? "#1c2823" : "#ffffff",
-      weight: 1.5,
-      fillColor: cssVal(meta.cssVar),
-      fillOpacity: 0.95,
-    })
-      .bindPopup(
-        `<div class="poi-popup">
-           <span class="poi-name"></span>
-           <span class="poi-cat"></span>
-           <div class="poi-actions">
-             <button type="button" class="poi-dir" data-origin="point">
-               <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#navigation-arrow"></use></svg>
-               <span class="poi-dir-label"></span>
-             </button>
-             <button type="button" class="poi-dir" data-origin="gps">
-               <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#crosshair-simple"></use></svg>
-               <span class="poi-dir-label"></span>
-             </button>
-           </div>
-           <p class="poi-msg" hidden></p>
-         </div>`
-      )
-      .on("popupopen", (e) => wirePoiPopup(e.popup.getElement(), poi, meta))
-      .addTo(poiLayer);
-  }
-
+  // layer peta (MapLibre GeoJSON sources)
+  setIsochrone(data.isochrone);
+  setPois(data.pois);
   setCenterMarker(data.center.lat, data.center.lon);
-  if (refetchDock) {
-    if (isDesktop()) {
-      // beri ruang untuk panel kiri dan dock durasi atas
-      map.fitBounds(iso.getBounds(), {
-        paddingTopLeft: L.point(462, 84),
-        paddingBottomRight: L.point(40, 40),
-      });
-    } else if (state.view === "peta") {
-      // mobile: sisakan ruang untuk bottom sheet (41vh) + kontrol atas
-      map.fitBounds(iso.getBounds(), {
-        paddingTopLeft: L.point(24, 132),
-        paddingBottomRight: L.point(24, Math.round(window.innerHeight * 0.44)),
-      });
-    } else {
-      map.fitBounds(iso.getBounds(), { padding: [26, 26] });
-    }
-  }
+  if (refetchDock) fitIsochrone(data.isochrone);
 
   showState("result");
   if (refetchDock && !REDUCED_MOTION) {
@@ -728,7 +831,7 @@ async function doSearch(query) {
         hideSearchResults();
         els.searchInput.value = r.name.split(",")[0];
         state.locationLabel = r.name.split(",").slice(0, 2).join(",");
-        map.setView([r.lat, r.lon], 15);
+        map.jumpTo({ center: [r.lon, r.lat], zoom: 15 });
         runAnalysis(r.lat, r.lon);
       });
       li.appendChild(btn);
@@ -886,7 +989,7 @@ async function init() {
     const resp = await fetch("/api/config");
     const cfg = await resp.json();
     state.minutes = cfg.default_minutes;
-    map.setView([cfg.default_center.lat, cfg.default_center.lon], 15);
+    map.jumpTo({ center: [cfg.default_center.lon, cfg.default_center.lat], zoom: 15 });
     for (const b of els.durationGroup.querySelectorAll("button")) {
       b.setAttribute("aria-checked", String(Number(b.dataset.minutes) === cfg.default_minutes));
     }
@@ -897,7 +1000,7 @@ async function init() {
       btn.addEventListener("click", () => {
         if (state.loading) return;
         state.locationLabel = loc.name;
-        map.setView([loc.lat, loc.lon], 15);
+        map.jumpTo({ center: [loc.lon, loc.lat], zoom: 15 });
         runAnalysis(loc.lat, loc.lon);
       });
       els.demoChips.appendChild(btn);
