@@ -73,6 +73,12 @@ const els = {
   swipeTrack: document.getElementById("swipe-track"),
   swipeHint: document.getElementById("swipe-hint"),
   tabbar: document.querySelector(".tabbar"),
+  statChecked: document.getElementById("stat-checked"),
+  statBest: document.getElementById("stat-best"),
+  statSaved: document.getElementById("stat-saved"),
+  recoCard: document.getElementById("reco-card"),
+  recentList: document.getElementById("recent-list"),
+  recentEmpty: document.getElementById("recent-empty"),
 };
 
 const state = {
@@ -86,6 +92,7 @@ const state = {
   compare: [],     // maks 2 snapshot untuk perbandingan
   lastData: null,  // payload terakhir, untuk re-render saat ganti bahasa/tema
   lastScore: null,
+  demoLocations: [],  // dari /api/config, fallback kartu rekomendasi Beranda
 };
 
 let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
@@ -153,6 +160,7 @@ function refreshLanguage() {
   updateLangPills();
   if (state.lastData) renderResult(state.lastData, { refetchDock: false });
   renderCompare();
+  renderBeranda();
   // dock skor yang sudah tampil ikut bahasa baru
   for (const btn of els.durationGroup.querySelectorAll("button")) {
     const el = btn.querySelector(".d-score");
@@ -408,6 +416,7 @@ function applyView() {
     tab.setAttribute("aria-current", String(tab.getAttribute("href") === location.hash));
   }
   updateCompareVisibility();
+  if (view === "menu") renderBeranda();
   if (MAP_VIEWS.has(view)) {
     // peta diinisialisasi di balik overlay; pastikan ukurannya benar
     setTimeout(() => map.resize(), 60);
@@ -446,11 +455,8 @@ function bandFor(score) {
 
 const EMPTY_COST = { lines: [], notes: [], subtotal: 0, range: { low: 0, high: 0 }, disclaimer: "" };
 
-const fmtRp = (n) => "Rp " + Math.round(n).toLocaleString(getLang() === "en" ? "en-US" : "id-ID");
-
-function fmtRange(low, high) {
-  return low === high ? fmtRp(low) : `${fmtRp(low)} - ${fmtRp(high)}`;
-}
+/* fmtRp / fmtRange sekarang ada di js/format.js (satu definisi saja -- dua
+   deklarasi top-level dengan nama sama di classic script = SyntaxError). */
 
 function parseRent(text) {
   const digits = String(text).replace(/\D/g, "");
@@ -559,6 +565,105 @@ function renderCompare() {
     ph.appendChild(p);
     els.compareGrid.appendChild(ph);
   }
+}
+
+/* ---------- Beranda (kanvas f2) ---------- */
+
+// Warna skor mengikuti band, jadi angka di kartu/daftar konsisten dengan sheet.
+function bandVarFor(score) {
+  return bandFor(Number(score) || 0).cssVar;
+}
+
+// Buka satu titik dari riwayat/tersimpan: pindah ke #/peta lalu analisis ulang.
+function openEntry(entry) {
+  state.minutes = entry.minutes || state.minutes;
+  state.locationLabel = entry.label || null;
+  for (const b of els.durationGroup.querySelectorAll("button")) {
+    b.setAttribute("aria-checked", String(Number(b.dataset.minutes) === state.minutes));
+  }
+  location.hash = "#/peta";
+  map.jumpTo({ center: [entry.lon, entry.lat], zoom: 15 });
+  runAnalysis(entry.lat, entry.lon);
+}
+
+function recentRow(entry) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "recent-row";
+  btn.innerHTML = `<span class="rr-thumb" aria-hidden="true"></span>
+    <span class="rr-name"></span>
+    <span class="rr-score tnum"></span>`;
+  btn.querySelector(".rr-name").textContent = entry.label || t("result.captionFallback");
+  const score = btn.querySelector(".rr-score");
+  score.textContent = String(entry.score ?? "-");
+  score.style.color = cssVal(bandVarFor(entry.score));
+  btn.querySelector(".rr-thumb").style.background = cssVal(bandVarFor(entry.score));
+  btn.addEventListener("click", () => openEntry(entry));
+  return btn;
+}
+
+// Rekomendasi = skor tertinggi dari riwayat. Kalau riwayat kosong, pakai lokasi
+// contoh dari /api/config -- kartu ini tidak pernah kosong, dan tidak mengarang
+// data: badge "contoh" dipakai supaya jelas itu bukan hasil analisis pengguna.
+function renderReco(entry) {
+  const demo = !entry;
+  const item = entry || (state.demoLocations && state.demoLocations[0]);
+  els.recoCard.replaceChildren();
+  if (!item) return;
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "reco-card";
+  card.innerHTML = `<span class="rc-hero" aria-hidden="true"><span class="rc-badge"></span></span>
+    <span class="rc-main"><span class="rc-name"></span><span class="rc-score tnum"></span></span>
+    <span class="rc-meta"></span>`;
+  card.querySelector(".rc-name").textContent = item.label || item.name;
+  const score = card.querySelector(".rc-score");
+  const badge = card.querySelector(".rc-badge");
+  if (demo) {
+    badge.textContent = t("beranda.recoDemo");
+    score.hidden = true;
+  } else {
+    badge.textContent = t("beranda.recoBadge");
+    score.textContent = String(item.score ?? "-");
+    score.style.color = cssVal(bandVarFor(item.score));
+  }
+  card.querySelector(".rc-hero").style.background = demo
+    ? cssVal("--accent-soft")
+    : cssVal(bandVarFor(item.score));
+
+  const meta = card.querySelector(".rc-meta");
+  const chips = [t("dock.minN", { n: item.minutes || state.minutes })];
+  chips.push(demo ? t("beranda.recoTryIt") : t(bandFor(Number(item.score) || 0).labelKey));
+  for (const text of chips) {
+    const chip = document.createElement("span");
+    chip.className = "rc-chip";
+    chip.textContent = text;
+    meta.appendChild(chip);
+  }
+
+  card.addEventListener("click", () => openEntry({
+    label: item.label || item.name,
+    lat: item.lat,
+    lon: item.lon,
+    minutes: item.minutes || state.minutes,
+  }));
+  els.recoCard.appendChild(card);
+}
+
+function renderBeranda() {
+  const hist = Store.history();
+  const saved = Store.saved();
+  els.statChecked.textContent = String(hist.length);
+  els.statBest.textContent = hist.length
+    ? String(Math.max(...hist.map((h) => Number(h.score) || 0)))
+    : "-";
+  els.statSaved.textContent = String(saved.length);
+
+  renderReco(hist.slice().sort((a, b) => (b.score || 0) - (a.score || 0))[0]);
+
+  els.recentList.replaceChildren();
+  for (const h of hist.slice(0, 5)) els.recentList.appendChild(recentRow(h));
+  els.recentEmpty.hidden = hist.length > 0;
 }
 
 /* ---------- dock durasi: skor per durasi ---------- */
@@ -724,6 +829,22 @@ function renderResult(data, opts) {
     els.resultView.classList.remove("enter");
     void els.resultView.offsetWidth; // restart animasi masuk
     els.resultView.classList.add("enter");
+  }
+
+  // Riwayat: dicatat hanya untuk hasil nyata. Data simulasi (fallback demo)
+  // tidak masuk riwayat -- statistik Beranda harus jujur.
+  if (!isDemo) {
+    Store.pushHistory({
+      label: state.locationLabel || t("result.captionFallback"),
+      kelurahan: "",
+      lat: data.center.lat,
+      lon: data.center.lon,
+      minutes: data.minutes,
+      score,
+      band: band.labelKey,
+      total: null,
+      at: new Date().toISOString(),
+    });
   }
 
   // dock: skor durasi aktif langsung, durasi lain menyusul di latar belakang.
@@ -1042,6 +1163,8 @@ async function init() {
     for (const b of els.durationGroup.querySelectorAll("button")) {
       b.setAttribute("aria-checked", String(Number(b.dataset.minutes) === cfg.default_minutes));
     }
+    state.demoLocations = cfg.demo_locations || [];
+    renderBeranda(); // kartu rekomendasi butuh lokasi contoh sebagai fallback
     for (const loc of cfg.demo_locations) {
       const btn = document.createElement("button");
       btn.type = "button";

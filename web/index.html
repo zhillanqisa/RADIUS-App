@@ -18,10 +18,10 @@
   </script>
   <link rel="preload" href="vendor/fonts/outfit-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/tokens.css?v=3">
+  <link rel="stylesheet" href="css/base.css?v=3">
+  <link rel="stylesheet" href="css/components.css?v=3">
+  <link rel="stylesheet" href="css/app.css?v=3">
 
   <!-- PWA: bisa "Tambah ke Layar Utama" di HP, tampil seperti app -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -94,13 +94,15 @@
   </div>
 </div>
 
-<div id="menu-screen" data-screen="menu">
-  <div class="menu-inner">
-    <header class="menu-topbar">
-      <div class="brand-row">
-        <div class="brand-mark" aria-hidden="true"><i></i></div>
-        <span class="brand-name">RADIUS</span>
-      </div>
+<!-- Beranda (kanvas f2). Menggantikan menu dua-kartu: kanvas menetapkan
+     dashboard dengan statistik, rekomendasi, dan daftar "Terakhir dicek".
+     Rak scroll-horizontal "tersimpan" sengaja DIHAPUS sesuai catatan kanvas. -->
+<div class="screen has-tabbar" id="menu-screen" data-screen="menu">
+  <div class="screen-inner">
+    <header class="beranda-top">
+      <a class="icon-btn" href="#/pengaturan" data-i18n-attr="aria-label:tab.pengaturan;title:tab.pengaturan">
+        <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#sliders"></use></svg>
+      </a>
       <div class="ui-controls">
         <div class="lang-pill" role="group" aria-label="Bahasa">
           <button type="button" data-lang="id" aria-pressed="true">ID</button>
@@ -113,55 +115,45 @@
       </div>
     </header>
 
-    <header class="menu-brand">
-      <p class="menu-tag" data-i18n="menu.kicker">Skor Kota 15 Menit</p>
-      <h1 class="menu-title" data-i18n="menu.title">Kota yang baik bisa dijalani kaki</h1>
-      <p class="menu-sub" data-i18n="menu.sub">Seberapa enak lokasimu untuk hidup tanpa kendaraan? Pilih alatnya.</p>
-    </header>
+    <p class="beranda-kicker" data-i18n="beranda.greeting">Selamat datang</p>
+    <h1 class="beranda-title" data-i18n="beranda.title">Cari tempat yang gampang dijangkau tanpa kendaraan</h1>
 
-    <nav class="menu-cards" aria-label="Pilih fitur">
-      <a class="menu-card" href="#/peta">
-        <span class="mc-icon" aria-hidden="true">
-          <svg class="icon"><use href="vendor/icons/sprite.svg#person-simple-walk"></use></svg>
-        </span>
-        <span class="mc-title" data-i18n="menu.tool1.name">Cek Lokasi Saya</span>
-        <span class="mc-desc" data-i18n="menu.tool1.desc">Nilai 0-100 dan peta: apa saja yang bisa dicapai jalan kaki dari titikmu.</span>
-      </a>
-      <a class="menu-card" href="#/biaya">
-        <span class="mc-icon" aria-hidden="true">
-          <svg class="icon"><use href="vendor/icons/sprite.svg#wallet"></use></svg>
-        </span>
-        <span class="mc-title" data-i18n="menu.tool2.name">Hitung Biaya Tinggal</span>
-        <span class="mc-desc" data-i18n="menu.tool2.desc">Sewa murah belum tentu hemat. Hitung sewa + ongkos ojek bulanan, bandingkan 2 lokasi.</span>
-      </a>
-    </nav>
-
-    <nav class="menu-swipe" id="menu-swipe" aria-label="Pilih fitur">
-      <div class="swipe-track" id="swipe-track">
-        <a class="swipe-pane pane-dark" href="#/peta">
-          <span class="mc-icon" aria-hidden="true">
-            <svg class="icon"><use href="vendor/icons/sprite.svg#person-simple-walk"></use></svg>
-          </span>
-          <span class="sp-tag swipe-tool-tag" data-tool="01" aria-hidden="true">ALAT 01</span>
-          <span class="sp-title" data-i18n="menu.tool1.name">Cek Lokasi Saya</span>
-          <span class="sp-desc" data-i18n="menu.tool1.desc">Nilai 0-100 dan peta: apa saja yang bisa dicapai jalan kaki dari titikmu.</span>
-          <span class="sp-sample"><strong>55</strong> <em data-i18n="menu.tool1.sample">contoh: Antapani, lumayan</em></span>
-          <span class="sp-cta" data-i18n="menu.tool1.cta">Mulai cek</span>
-        </a>
-        <a class="swipe-pane pane-light" href="#/biaya">
-          <span class="mc-icon" aria-hidden="true">
-            <svg class="icon"><use href="vendor/icons/sprite.svg#wallet"></use></svg>
-          </span>
-          <span class="sp-tag swipe-tool-tag" data-tool="02" aria-hidden="true">ALAT 02</span>
-          <span class="sp-title" data-i18n="menu.tool2.name">Hitung Biaya Tinggal</span>
-          <span class="sp-desc" data-i18n="menu.tool2.desc">Sewa murah belum tentu hemat. Hitung sewa + ongkos ojek bulanan, bandingkan 2 lokasi.</span>
-          <span class="sp-sample"><strong>Rp1,51-1,67 jt</strong> <em data-i18n="menu.tool2.sample">contoh total per bulan di Antapani</em></span>
-          <span class="sp-cta" data-i18n="menu.tool2.cta">Mulai hitung</span>
-        </a>
+    <div class="stat-row beranda-stats">
+      <div class="stat-tile">
+        <p class="st-value" id="stat-checked">0</p>
+        <p class="st-label" data-i18n="beranda.statChecked">lokasi dicek</p>
       </div>
-      <div class="swipe-dots" aria-hidden="true"><span class="active"></span><span></span></div>
-      <p class="swipe-hint" id="swipe-hint" data-i18n="menu.swipeHint">Geser untuk alat kedua</p>
-    </nav>
+      <div class="stat-tile is-good">
+        <p class="st-value" id="stat-best">-</p>
+        <p class="st-label" data-i18n="beranda.statBest">skor tertinggi</p>
+      </div>
+      <div class="stat-tile">
+        <p class="st-value" id="stat-saved">0</p>
+        <p class="st-label" data-i18n="beranda.statSaved">tersimpan</p>
+      </div>
+    </div>
+
+    <a class="pill-btn beranda-search" href="#/peta">
+      <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#magnifying-glass"></use></svg>
+      <span data-i18n="beranda.searchCta">Cari alamat atau kelurahan</span>
+    </a>
+
+    <a class="card-dark beranda-compare" href="#/banding">
+      <div>
+        <p class="bc-title" data-i18n="beranda.compareTitle">Bandingkan 2 Lokasi</p>
+        <p class="bc-sub" data-i18n="beranda.compareSub">Skor, sewa, dan ongkos ojek berdampingan</p>
+      </div>
+      <span class="bc-arrow" aria-hidden="true">
+        <svg class="icon icon-stroke"><use href="vendor/icons/sprite.svg#arrow-right"></use></svg>
+      </span>
+    </a>
+
+    <p class="section-title" data-i18n="beranda.recoTitle">Rekomendasi buat kamu</p>
+    <div id="reco-card"></div>
+
+    <p class="section-title" data-i18n="beranda.recentTitle">Terakhir dicek</p>
+    <div class="recent-list" id="recent-list"></div>
+    <p class="recent-empty" id="recent-empty" data-i18n="beranda.recentEmpty">Belum ada lokasi yang dicek. Mulai dari pencarian di atas.</p>
 
     <p class="menu-note" data-i18n="menu.note">Data: OpenStreetMap · analisis jaringan jalan pejalan kaki (OSMnx)</p>
   </div>
@@ -354,8 +346,10 @@
 </nav>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>
-<script src="js/i18n.js"></script>
-<script src="js/app.js"></script>
+<script src="js/i18n.js?v=3"></script>
+<script src="js/store.js?v=3"></script>
+<script src="js/format.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
 <script>
   // Daftarkan service worker HANYA di browser (bukan WebView Capacitor,
   // supaya tidak bentrok dengan bridge native).

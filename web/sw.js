@@ -3,15 +3,25 @@
    stale-cache). Cache dipakai HANYA sebagai cadangan offline aset shell. */
 "use strict";
 
-const CACHE = "radius-shell-v2";
+const CACHE = "radius-shell-v3";
 
 // Aset shell yang aman di-cache (vendor lokal jarang berubah).
+// CATATAN: css/js kita memakai ?v=<versi> yang SAMA dengan index.html.
+// FastAPI StaticFiles tidak mengirim Cache-Control, jadi browser memakai
+// heuristic freshness dan bisa menyajikan aset basi setelah deploy. Query
+// versi adalah satu-satunya cache-buster yang kita punya tanpa menyentuh app/.
+// Naikkan versi di index.html DAN di sini bersamaan.
 const SHELL = [
   "/",
   "/index.html",
-  "/css/app.css",
-  "/js/i18n.js",
-  "/js/app.js",
+  "/css/tokens.css?v=3",
+  "/css/base.css?v=3",
+  "/css/components.css?v=3",
+  "/css/app.css?v=3",
+  "/js/i18n.js?v=3",
+  "/js/store.js?v=3",
+  "/js/format.js?v=3",
+  "/js/app.js?v=3",
   "/vendor/maplibre/maplibre-gl.css",
   "/vendor/maplibre/maplibre-gl.js",
   "/vendor/fonts/outfit-variable.woff2",
