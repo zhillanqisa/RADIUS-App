@@ -99,6 +99,15 @@ const els = {
   commuteTime: document.getElementById("commute-time"),
   needWork: document.getElementById("need-work"),
   costFootnote: document.getElementById("cost-footnote"),
+  compareHead: document.getElementById("compare-head"),
+  compareVerdict: document.getElementById("compare-verdict"),
+  compareVerdictBadge: document.getElementById("compare-verdict-badge"),
+  compareVerdictText: document.getElementById("compare-verdict-text"),
+  compareEmpty: document.getElementById("compare-empty"),
+  compareLoading: document.getElementById("compare-loading"),
+  compareError: document.getElementById("compare-error"),
+  compareErrorTitle: document.getElementById("compare-error-title"),
+  compareBody: document.getElementById("compare-body"),
 };
 
 const state = {
@@ -490,7 +499,8 @@ function markLandingSeen() {
 }
 
 function updateCompareVisibility() {
-  els.compareCard.hidden = !(state.view === "biaya" && state.compare.length > 0);
+  // Perbandingan sekarang layar sendiri (#/banding), bukan kartu di #/biaya.
+  els.compareCard.hidden = state.compare.length === 0;
 }
 
 function applyView() {
@@ -517,6 +527,7 @@ function applyView() {
   }
   updateCompareVisibility();
   if (view === "menu") renderBeranda();
+  if (view === "banding") { setCompareState("ready"); renderCompare(); }
   if (MAP_VIEWS.has(view)) {
     // peta diinisialisasi di balik overlay; pastikan ukurannya benar
     setTimeout(() => map.resize(), 60);
@@ -717,40 +728,162 @@ function setWork(work) {
 
 /* ---------- perbandingan 2 lokasi ---------- */
 
-function renderCompare() {
-  updateCompareVisibility();
-  els.compareGrid.replaceChildren();
-  if (state.compare.length === 0) return;
+// Selisih di bawah ambang ini dianggap imbang: menyorot "pemenang" pada beda
+// 1% akan menyesatkan, karena seluruh angkanya sendiri sebuah estimasi.
+const COMPARE_TIE_RATIO = 0.02;
 
-  // pemenang = total titik tengah terendah (sewa + subtotal), hanya saat 2 slot terisi
-  let winIdx = -1;
-  if (state.compare.length === 2) {
-    const mids = state.compare.map((s) => s.rent + s.subtotal);
-    if (mids[0] !== mids[1]) winIdx = mids[0] < mids[1] ? 0 : 1;
+const snapTotalMid = (s) => totalMid(s.rent, s.subtotal, s.commute);
+
+/**
+ * Vonis dihitung dari TOTAL, bukan skor (kanvas f7a-f7c).
+ * @returns {{kind:"tie"|"win"|"win-lower-score", winner:number, diff:number, ta:number, tb:number}}
+ */
+function compareVerdict(a, b) {
+  const ta = snapTotalMid(a);
+  const tb = snapTotalMid(b);
+  const diff = Math.abs(ta - tb);
+  const base = Math.min(ta, tb) || 1;
+  if (diff / base < COMPARE_TIE_RATIO) {
+    return { kind: "tie", winner: -1, diff, ta, tb };
+  }
+  const winner = ta < tb ? 0 : 1;
+  const winScore = winner === 0 ? a.score : b.score;
+  const loseScore = winner === 0 ? b.score : a.score;
+  return {
+    kind: winScore < loseScore ? "win-lower-score" : "win",
+    winner,
+    diff,
+    ta,
+    tb,
+  };
+}
+
+function compareCol(snap, idx, isWinner) {
+  const col = document.createElement("div");
+  col.className = "compare-col" + (isWinner ? " win" : "");
+  col.innerHTML = `
+    <span class="c-badge" hidden></span>
+    <div class="c-head">
+      <span class="c-side"></span>
+      <span class="c-score tnum"></span>
+    </div>
+    <p class="c-label"></p>
+    <div class="c-rows">
+      <div class="c-row"><span class="c-k"></span><strong class="c-v"></strong></div>
+      <div class="c-row"><span class="c-k"></span><strong class="c-v"></strong></div>
+      <div class="c-row c-commute" hidden><span class="c-k"></span><strong class="c-v"></strong></div>
+    </div>
+    <div class="c-total"><span class="c-k"></span><strong class="c-v tnum"></strong></div>`;
+
+  if (isWinner) {
+    const badge = col.querySelector(".c-badge");
+    badge.hidden = false;
+    badge.textContent = t("compare.badgeCheapest");
+  }
+  col.querySelector(".c-side").textContent = t(idx === 0 ? "compare.sideA" : "compare.sideB");
+  const score = col.querySelector(".c-score");
+  score.textContent = String(snap.score);
+  score.style.color = cssVal(bandVarFor(snap.score));
+  col.querySelector(".c-label").textContent = snap.label;
+
+  const rows = col.querySelectorAll(".c-rows .c-row");
+  const fill = (row, key, value) => {
+    row.querySelector(".c-k").textContent = key;
+    row.querySelector(".c-v").textContent = value;
+  };
+  fill(rows[0], t("compare.rowRent"), snap.rent > 0 ? fmtRp(snap.rent) : "-");
+  fill(rows[1], t("compare.rowExtra"), fmtRange(snap.low, snap.high));
+  if (snap.commute > 0) {
+    rows[2].hidden = false;
+    fill(rows[2], t("compare.rowCommute"), fmtRp(snap.commute));
   }
 
+  const total = col.querySelector(".c-total");
+  total.querySelector(".c-k").textContent = t("compare.rowTotalMonth");
+  total.querySelector(".c-v").textContent = fmtRange(
+    snap.rent + snap.low + (snap.commuteLow || 0),
+    snap.rent + snap.high + (snap.commuteHigh || 0)
+  );
+  return col;
+}
+
+function renderCompare() {
+  updateCompareVisibility();
+  if (!els.compareGrid) return;
+  els.compareGrid.replaceChildren();
+
+  const n = state.compare.length;
+  els.compareEmpty.hidden = n > 0;
+  els.compareVerdict.hidden = n < 2;
+
+  if (n === 0) return;
+
+  const verdict = n === 2 ? compareVerdict(state.compare[0], state.compare[1]) : null;
+
   state.compare.forEach((snap, idx) => {
-    const col = document.createElement("div");
-    col.className = "compare-col" + (idx === winIdx ? " win" : "");
-    col.innerHTML = `
-      <p class="c-label"></p>
-      <div class="c-row"><span>${t("compare.rowScore", { menit: snap.minutes })}</span><strong>${snap.score}</strong></div>
-      <div class="c-row"><span>${t("compare.rowRent")}</span><strong>${snap.rent > 0 ? fmtRp(snap.rent) : "-"}</strong></div>
-      <div class="c-row"><span>${t("compare.rowExtra")}</span><strong>${fmtRange(snap.low, snap.high)}</strong></div>
-      <div class="c-row"><span>${t("compare.rowTotal")}</span><strong>${fmtRange(snap.rent + snap.low, snap.rent + snap.high)}</strong></div>
-      ${idx === winIdx ? `<span class="c-win-pill">${t("compare.winPill")}</span>` : ""}`;
-    col.querySelector(".c-label").textContent = snap.label;
-    els.compareGrid.appendChild(col);
+    els.compareGrid.appendChild(
+      compareCol(snap, idx, !!verdict && verdict.winner === idx)
+    );
   });
 
-  if (state.compare.length === 1) {
+  // satu slot terisi: tampilkan placeholder, tanpa vonis
+  if (n === 1) {
     const ph = document.createElement("div");
-    ph.className = "compare-col";
+    ph.className = "compare-col is-slot";
     const p = document.createElement("p");
     p.className = "c-slot";
     p.textContent = t("compare.slotHint");
     ph.appendChild(p);
     els.compareGrid.appendChild(ph);
+  }
+
+  if (!verdict) return;
+
+  const [a, b] = state.compare;
+  const side = t(verdict.winner === 0 ? "compare.sideA" : "compare.sideB");
+  els.compareVerdict.classList.toggle("is-tie", verdict.kind === "tie");
+
+  if (verdict.kind === "tie") {
+    // Imbang: jangan sorot siapa pun, serahkan keputusan ke skor jalan kaki.
+    const better = a.score === b.score ? null : (a.score > b.score ? 0 : 1);
+    els.compareVerdictBadge.textContent = t("compare.tieBadge");
+    els.compareVerdictText.textContent =
+      t("compare.tie", { diff: fmtRp(verdict.diff) }) +
+      (better === null
+        ? " " + t("compare.tieEqualScore")
+        : " " +
+          t("compare.tieByScore", {
+            side: t(better === 0 ? "compare.sideA" : "compare.sideB"),
+            win: better === 0 ? a.score : b.score,
+            lose: better === 0 ? b.score : a.score,
+          }));
+  } else {
+    els.compareVerdictBadge.textContent = t("compare.cheapest", { side });
+    const key = verdict.kind === "win-lower-score" ? "compare.winLowerScore" : "compare.win";
+    els.compareVerdictText.textContent = t(key, {
+      side,
+      diff: fmtRp(verdict.diff),
+    });
+  }
+
+  els.compareHead.textContent = n === 2
+    ? t("compare.headVs", { a: a.label, b: b.label })
+    : t("compare.headTitle");
+}
+
+/* ---------- perbandingan: status muat & gagal (kanvas f7d/f7e) ---------- */
+
+function setCompareState(which, failedSide) {
+  const busy = which === "loading";
+  const failed = which === "error";
+  els.compareLoading.hidden = !busy;
+  els.compareError.hidden = !failed;
+  els.compareBody.hidden = busy || failed;
+  if (failed) {
+    // Pesan menyebut SISI yang gagal, bukan pesan generik (kanvas f7e).
+    els.compareErrorTitle.textContent = t("compare.errNotFound", {
+      side: t(failedSide === 1 ? "compare.sideB" : "compare.sideA"),
+    });
   }
 }
 

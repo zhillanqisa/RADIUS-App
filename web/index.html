@@ -18,10 +18,10 @@
   </script>
   <link rel="preload" href="vendor/fonts/outfit-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
-  <link rel="stylesheet" href="css/tokens.css?v=5">
-  <link rel="stylesheet" href="css/base.css?v=5">
-  <link rel="stylesheet" href="css/components.css?v=5">
-  <link rel="stylesheet" href="css/app.css?v=5">
+  <link rel="stylesheet" href="css/tokens.css?v=6">
+  <link rel="stylesheet" href="css/base.css?v=6">
+  <link rel="stylesheet" href="css/components.css?v=6">
+  <link rel="stylesheet" href="css/app.css?v=6">
 
   <!-- PWA: bisa "Tambah ke Layar Utama" di HP, tampil seperti app -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -156,6 +156,64 @@
     <p class="recent-empty" id="recent-empty" data-i18n="beranda.recentEmpty">Belum ada lokasi yang dicek. Mulai dari pencarian di atas.</p>
 
     <p class="menu-note" data-i18n="menu.note">Data: OpenStreetMap · analisis jaringan jalan pejalan kaki (OSMnx)</p>
+  </div>
+</div>
+
+<!-- Perbandingan 2 lokasi (kanvas f7a-f7e). Vonis dihitung dari TOTAL biaya,
+     bukan skor: kalau lokasi termurah justru skornya lebih rendah, kalimat
+     vonis menyebutkannya terang-terangan. -->
+<div class="screen has-tabbar" id="banding-screen" data-screen="banding">
+  <div class="screen-inner">
+    <div class="screen-head">
+      <a class="icon-btn" href="#/menu" data-i18n-attr="aria-label:nav.back;title:nav.back">
+        <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#chevron-left"></use></svg>
+      </a>
+      <p class="screen-title" id="compare-head" data-i18n="compare.headTitle">Perbandingan 2 Lokasi</p>
+    </div>
+
+    <div class="compare-loading" id="compare-loading" hidden>
+      <div class="cl-main">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="cl-text" data-i18n="compare.loading">Menghitung skor dan ongkos kedua lokasi…</p>
+      </div>
+      <div class="cl-skeletons" aria-hidden="true">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </div>
+
+    <div class="empty-state" id="compare-error" hidden>
+      <span class="es-glyph" aria-hidden="true">
+        <svg class="icon"><use href="vendor/icons/sprite.svg#warning-circle"></use></svg>
+      </span>
+      <p class="es-title" id="compare-error-title"></p>
+      <p class="es-body" data-i18n="compare.errBody">Coba cari alamat lain atau tandai titik langsung di peta.</p>
+      <a class="dark-btn" href="#/peta" data-i18n="compare.errCta">Cari Alamat Lain</a>
+    </div>
+
+    <div id="compare-body">
+      <div class="verdict-card" id="compare-verdict" hidden>
+        <span class="vc-badge" id="compare-verdict-badge"></span>
+        <p class="vc-text" id="compare-verdict-text"></p>
+      </div>
+
+      <section class="compare-card" id="compare-card" aria-label="Perbandingan dua lokasi" hidden>
+        <div class="compare-grid" id="compare-grid"></div>
+        <div class="compare-foot">
+          <p class="compare-note" data-i18n="compare.note">Yang dibandingkan total biaya, bukan sewa. Sewa termurah belum tentu total termurah.</p>
+          <button type="button" class="compare-clear" id="compare-clear" data-i18n="compare.clear">hapus</button>
+        </div>
+      </section>
+
+      <div class="empty-state" id="compare-empty">
+        <span class="es-glyph" aria-hidden="true">
+          <svg class="icon icon-stroke"><use href="vendor/icons/sprite.svg#sliders"></use></svg>
+        </span>
+        <p class="es-title" data-i18n="compare.emptyTitle">Belum ada lokasi untuk dibandingkan</p>
+        <p class="es-body" data-i18n="compare.emptyBody">Analisis sebuah lokasi, isi sewanya di Hitung Biaya Tinggal, lalu simpan untuk perbandingan.</p>
+        <a class="dark-btn" href="#/peta" data-i18n="compare.emptyCta">Cek Lokasi Sekarang</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -398,14 +456,7 @@
       </div>
     </section>
 
-    <section class="compare-card" id="compare-card" aria-label="Perbandingan dua lokasi" hidden>
-      <div class="cost-head">
-        <p class="cost-title" data-i18n="compare.title">Perbandingan 2 Lokasi</p>
-        <button type="button" class="compare-clear" id="compare-clear" data-i18n="compare.clear">hapus</button>
-      </div>
-      <div class="compare-grid" id="compare-grid"></div>
-      <p class="compare-note" data-i18n="compare.note">Yang dibandingkan total biaya, bukan sewa. Sewa termurah belum tentu total termurah.</p>
-    </section>
+
 
   </aside>
 </div>
@@ -426,12 +477,12 @@
 </nav>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>
-<script src="js/i18n.js?v=5"></script>
-<script src="js/store.js?v=5"></script>
-<script src="js/format.js?v=5"></script>
-<script src="js/persona.js?v=5"></script>
-<script src="js/cost.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/i18n.js?v=6"></script>
+<script src="js/store.js?v=6"></script>
+<script src="js/format.js?v=6"></script>
+<script src="js/persona.js?v=6"></script>
+<script src="js/cost.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 <script>
   // Daftarkan service worker HANYA di browser (bukan WebView Capacitor,
   // supaya tidak bentrok dengan bridge native).
