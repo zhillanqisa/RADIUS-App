@@ -33,7 +33,68 @@
 </head>
 <body>
 
-<div id="menu-screen">
+<!-- Landing (kanvas f1): nama produk jadi grafiknya sendiri — grid tipis dengan
+     lingkaran konsentris (isochrone) di sekitar satu titik. -->
+<div class="screen" id="landing-screen" data-screen="landing">
+  <div class="landing-hero" aria-hidden="true">
+    <svg class="landing-grid" viewBox="0 0 390 620" preserveAspectRatio="xMidYMid slice">
+      <g class="lg-lines">
+        <line x1="0" y1="90" x2="390" y2="90"></line>
+        <line x1="0" y1="220" x2="390" y2="220"></line>
+        <line x1="0" y1="350" x2="390" y2="350"></line>
+        <line x1="0" y1="480" x2="390" y2="480"></line>
+        <line x1="90" y1="0" x2="90" y2="620"></line>
+        <line x1="220" y1="0" x2="220" y2="620"></line>
+        <line x1="320" y1="0" x2="320" y2="620"></line>
+      </g>
+      <circle class="lg-ring" cx="195" cy="310" r="60"></circle>
+      <circle class="lg-ring lg-fill dashed" cx="195" cy="310" r="120"></circle>
+      <circle class="lg-ring dashed lg-faint" cx="195" cy="310" r="180"></circle>
+      <circle class="lg-center" cx="195" cy="310" r="7"></circle>
+    </svg>
+  </div>
+
+  <div class="landing-top">
+    <svg class="logo-ring" viewBox="0 0 100 100" width="26" height="26" aria-hidden="true">
+      <circle class="lr-track" cx="50" cy="50" r="40"></circle>
+      <circle class="lr-arc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
+      <circle class="lr-dot" cx="50" cy="10" r="9"></circle>
+    </svg>
+    <span class="landing-brand">RADIUS</span>
+  </div>
+
+  <p class="landing-pill" data-i18n="landing.pill">15 menit jalan kaki dari sini</p>
+
+  <div class="landing-card">
+    <h1 class="landing-title" data-i18n="landing.title">Semua kebutuhanmu, dalam radius jalan kaki.</h1>
+    <p class="landing-sub" data-i18n="landing.sub">Gambar lingkaran itu buat lokasi manapun, lihat apa yang benar-benar dekat.</p>
+    <a class="dark-btn landing-cta" href="#/peta" data-seen-landing data-i18n="landing.cta">Gambar Radius Saya</a>
+    <a class="landing-alt" href="#/masuk" data-i18n="landing.alt">Punya akun? Masuk</a>
+  </div>
+</div>
+
+<!-- Masuk (kanvas 5b): "tamu dulu, akun belakangan". Tombol tamu sengaja lebih
+     menonjol daripada tombol akun — RADIUS alat publik, akun bukan penghalang. -->
+<div class="screen" id="masuk-screen" data-screen="masuk">
+  <div class="screen-inner masuk-inner">
+    <div class="masuk-main">
+      <svg class="logo-ring masuk-logo" viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
+        <circle class="lr-track" cx="50" cy="50" r="40"></circle>
+        <circle class="lr-arc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
+        <circle class="lr-dot" cx="50" cy="10" r="9"></circle>
+      </svg>
+      <h1 class="masuk-title" data-i18n="masuk.title">RADIUS bisa dipakai tanpa akun</h1>
+      <p class="masuk-sub" data-i18n="masuk.sub">Riwayat tersimpan di HP ini. Kalau mau riwayat ikut ke perangkat lain, masuk dulu — kapan saja.</p>
+    </div>
+    <div class="masuk-actions">
+      <a class="dark-btn" href="#/menu" data-seen-landing data-i18n="masuk.guest">Lanjut sebagai Tamu</a>
+      <button type="button" class="ghost-btn" disabled data-i18n="masuk.google">Masuk dengan Google</button>
+      <p class="masuk-note" data-i18n="masuk.soon">Masuk dengan akun belum tersedia di versi ini.</p>
+    </div>
+  </div>
+</div>
+
+<div id="menu-screen" data-screen="menu">
   <div class="menu-inner">
     <header class="menu-topbar">
       <div class="brand-row">
@@ -276,6 +337,21 @@
 
   </aside>
 </div>
+
+<nav class="tabbar" aria-label="Navigasi utama">
+  <a class="tab" href="#/menu" data-i18n-attr="aria-label:tab.beranda;title:tab.beranda">
+    <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#house"></use></svg>
+  </a>
+  <a class="tab" href="#/peta" data-i18n-attr="aria-label:tab.peta;title:tab.peta">
+    <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#magnifying-glass"></use></svg>
+  </a>
+  <a class="tab" href="#/tersimpan" data-i18n-attr="aria-label:tab.tersimpan;title:tab.tersimpan">
+    <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#clock"></use></svg>
+  </a>
+  <a class="tab" href="#/pengaturan" data-i18n-attr="aria-label:tab.pengaturan;title:tab.pengaturan">
+    <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#user"></use></svg>
+  </a>
+</nav>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>
 <script src="js/i18n.js"></script>

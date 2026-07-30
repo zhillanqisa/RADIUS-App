@@ -4,6 +4,23 @@
 
 const STRINGS = {
   id: {
+    // landing (kanvas f1)
+    "landing.pill": "15 menit jalan kaki dari sini",
+    "landing.title": "Semua kebutuhanmu, dalam radius jalan kaki.",
+    "landing.sub": "Gambar lingkaran itu buat lokasi manapun, lihat apa yang benar-benar dekat.",
+    "landing.cta": "Gambar Radius Saya",
+    "landing.alt": "Punya akun? Masuk",
+    // masuk: tamu dulu (kanvas 5b)
+    "masuk.title": "RADIUS bisa dipakai tanpa akun",
+    "masuk.sub": "Riwayat tersimpan di HP ini. Kalau mau riwayat ikut ke perangkat lain, masuk dulu — kapan saja.",
+    "masuk.guest": "Lanjut sebagai Tamu",
+    "masuk.google": "Masuk dengan Google",
+    "masuk.soon": "Masuk dengan akun belum tersedia di versi ini.",
+    // nav bawah
+    "tab.beranda": "Beranda",
+    "tab.peta": "Cek Lokasi",
+    "tab.tersimpan": "Tersimpan",
+    "tab.pengaturan": "Pengaturan",
     // menu
     "menu.kicker": "Skor Kota 15 Menit",
     "menu.title": "Kota yang baik bisa dijalani kaki",
@@ -116,6 +133,20 @@ const STRINGS = {
     "map.point": "Titik ({lat}, {lon})",
   },
   en: {
+    "landing.pill": "a 15-minute walk from here",
+    "landing.title": "Everything you need, within walking radius.",
+    "landing.sub": "Draw that circle around any location and see what is genuinely close.",
+    "landing.cta": "Draw My Radius",
+    "landing.alt": "Have an account? Sign in",
+    "masuk.title": "RADIUS works without an account",
+    "masuk.sub": "History stays on this phone. If you want it to follow you to another device, sign in — any time.",
+    "masuk.guest": "Continue as Guest",
+    "masuk.google": "Sign in with Google",
+    "masuk.soon": "Account sign-in isn't available in this version yet.",
+    "tab.beranda": "Home",
+    "tab.peta": "Check Area",
+    "tab.tersimpan": "Saved",
+    "tab.pengaturan": "Settings",
     "menu.kicker": "15-Minute City Score",
     "menu.title": "A good city can be lived on foot",
     "menu.sub": "How livable is your spot without a vehicle? Pick a tool.",

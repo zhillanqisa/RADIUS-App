@@ -72,6 +72,7 @@ const els = {
   sheetHandle: document.getElementById("sheet-handle"),
   swipeTrack: document.getElementById("swipe-track"),
   swipeHint: document.getElementById("swipe-hint"),
+  tabbar: document.querySelector(".tabbar"),
 };
 
 const state = {
@@ -349,24 +350,66 @@ function isDesktop() {
 
 /* ---------- routing: menu | peta | biaya ---------- */
 
-const VIEW_FOR_HASH = { "#/menu": "menu", "#/peta": "peta", "#/biaya": "biaya" };
+const VIEW_FOR_HASH = {
+  "#/landing": "landing",
+  "#/masuk": "masuk",
+  "#/menu": "menu",
+  "#/peta": "peta",
+  "#/biaya": "biaya",
+  "#/banding": "banding",
+  "#/tersimpan": "tersimpan",
+  "#/pengaturan": "pengaturan",
+};
+// Layar yang memakai nav bawah. #/peta & #/biaya tidak: bottom sheet memiliki
+// tepi bawah itu, dan chevron kembali di header jadi jalan keluarnya.
+const TABBAR_VIEWS = new Set(["menu", "tersimpan", "pengaturan", "banding"]);
+// Layar yang benar-benar memakai peta di belakangnya.
+const MAP_VIEWS = new Set(["peta", "biaya"]);
+
+// Landing hanya untuk kunjungan pertama; sesudah itu langsung ke Beranda.
+function defaultHash() {
+  let seen = false;
+  try {
+    seen = localStorage.getItem("radius_seen_landing") === "1";
+  } catch (e) {
+    seen = true; // localStorage mati (WebView privat) -> jangan kunci di landing
+  }
+  return seen ? "#/menu" : "#/landing";
+}
+
+function markLandingSeen() {
+  try { localStorage.setItem("radius_seen_landing", "1"); } catch (e) { /* abaikan */ }
+}
 
 function updateCompareVisibility() {
   els.compareCard.hidden = !(state.view === "biaya" && state.compare.length > 0);
 }
 
 function applyView() {
-  const view = VIEW_FOR_HASH[location.hash] || "menu";
+  if (!VIEW_FOR_HASH[location.hash]) {
+    location.replace(defaultHash());
+    if (!VIEW_FOR_HASH[location.hash]) return; // hashchange akan memanggil ulang
+  }
+  const view = VIEW_FOR_HASH[location.hash];
   state.view = view;
   document.body.dataset.view = view;
-  els.menuScreen.hidden = view !== "menu";
-  els.durationDock.hidden = view === "menu";
+
+  // Setiap layar penuh adalah overlay di atas peta. Peta TIDAK disembunyikan:
+  // MapLibre di container display:none tidak bisa di-resize dengan benar.
+  for (const el of document.querySelectorAll("[data-screen]")) {
+    el.hidden = el.dataset.screen !== view;
+  }
+  els.tabbar.hidden = !TABBAR_VIEWS.has(view);
+  els.durationDock.hidden = view !== "peta";
   els.analysisView.hidden = view !== "peta";
   els.costView.hidden = view !== "biaya";
   els.panel.classList.remove("sheet-full"); // sheet selalu mulai ringkas
+  for (const tab of els.tabbar.querySelectorAll(".tab")) {
+    tab.setAttribute("aria-current", String(tab.getAttribute("href") === location.hash));
+  }
   updateCompareVisibility();
-  if (view !== "menu") {
-    // peta diinisialisasi di balik overlay menu; pastikan ukurannya benar
+  if (MAP_VIEWS.has(view)) {
+    // peta diinisialisasi di balik overlay; pastikan ukurannya benar
     setTimeout(() => map.resize(), 60);
   }
 }
@@ -929,6 +972,8 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (e.target.closest(".theme-btn")) toggleTheme();
+  // Keluar dari landing lewat CTA mana pun = jangan tampilkan lagi.
+  if (e.target.closest("[data-seen-landing]")) markLandingSeen();
 });
 
 /* ---------- bottom sheet (mobile, view peta) ---------- */
