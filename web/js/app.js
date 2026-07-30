@@ -82,6 +82,23 @@ const els = {
   personaRow: document.getElementById("persona-row"),
   personaBadge: document.getElementById("persona-badge"),
   bookmarkBtn: document.getElementById("bookmark-btn"),
+  rentStep: document.getElementById("rent-step"),
+  workInput: document.getElementById("work-input"),
+  workField: document.querySelector(".work-field"),
+  workResults: document.getElementById("work-results"),
+  workError: document.getElementById("work-error"),
+  workGps: document.getElementById("work-gps"),
+  workPicked: document.getElementById("work-picked"),
+  workPickedLabel: document.getElementById("work-picked-label"),
+  workClear: document.getElementById("work-clear"),
+  commuteRow: document.getElementById("commute-row"),
+  commuteRowLabel: document.getElementById("commute-row-label"),
+  commuteRowValue: document.getElementById("commute-row-value"),
+  commuteStats: document.getElementById("commute-stats"),
+  commuteCost: document.getElementById("commute-cost"),
+  commuteTime: document.getElementById("commute-time"),
+  needWork: document.getElementById("need-work"),
+  costFootnote: document.getElementById("cost-footnote"),
 };
 
 const state = {
@@ -97,6 +114,8 @@ const state = {
   lastScore: null,
   demoLocations: [],  // dari /api/config, fallback kartu rekomendasi Beranda
   persona: "umum",    // bobot kategori yang dipakai untuk menimbang skor
+  work: null,         // {lat, lon, label} lokasi kerja/kampus
+  commute: null,      // hasil commuterCost() terakhir
 };
 
 let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
@@ -603,10 +622,97 @@ function updateCostSummary() {
     return;
   }
   const { low, high } = est.range;
+  const commute = commuterCost(state.center, state.work);
+  state.commute = commute;
+
   els.costRent.textContent = state.rent > 0 ? fmtRp(state.rent) : t("cost.rentEmpty");
   els.costExtra.textContent = fmtRange(low, high);
-  els.costTotal.textContent = fmtRange(state.rent + low, state.rent + high);
+
+  const total = totalRange(state.rent, est, commute);
+  if (commute) {
+    // Kanvas f4b: total penuh + baris ongkos komuter + dua kartu statistik.
+    els.costTotal.textContent = fmtRange(total.low, total.high);
+    els.commuteRow.hidden = false;
+    els.commuteRowLabel.textContent = t("cost.commuteRow", { n: COMMUTE.ROUND_TRIPS });
+    els.commuteRowValue.textContent = fmtRp(commute.monthly);
+    els.needWork.hidden = true;
+    els.commuteStats.hidden = false;
+    els.commuteCost.textContent = fmtRange(commute.low, commute.high);
+    els.commuteTime.textContent = t("cost.hoursPerMonth", { n: commute.hours });
+  } else {
+    // Kanvas f4: state parsial -- total sewa saja, plus ajakan isi lokasi kerja.
+    els.costTotal.textContent =
+      (state.rent > 0 ? fmtRange(total.low, total.high) : fmtRp(total.low)) +
+      t("cost.plusRides");
+    els.commuteRow.hidden = true;
+    els.needWork.hidden = false;
+    els.commuteStats.hidden = true;
+  }
+
+  // Catatan yang mengikat skor ke ongkos (kanvas f4/f4b).
+  els.costFootnote.textContent =
+    state.lastScore == null
+      ? ""
+      : t("cost.scoreFootnote", { score: state.lastScore });
+
   els.costSummary.hidden = false;
+}
+
+/* ---------- lokasi kerja/kampus (kanvas f4) ---------- */
+
+// Satu helper geocode dipakai oleh #/peta dan field lokasi kerja supaya
+// keduanya tidak bisa menyimpang perilakunya.
+async function geocodeInto(query, listEl, errEl, onPick) {
+  errEl.hidden = true;
+  try {
+    const resp = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+    if (!resp.ok) {
+      const detail = await resp.json().catch(() => ({}));
+      throw new Error(detail.detail || t("search.failed"));
+    }
+    const { results } = await resp.json();
+    listEl.replaceChildren();
+    if (results.length === 0) {
+      errEl.textContent = t("search.notFound");
+      errEl.hidden = false;
+      listEl.hidden = true;
+      return;
+    }
+    for (const r of results) {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("role", "option");
+      btn.textContent = r.name;
+      btn.addEventListener("click", () => {
+        listEl.hidden = true;
+        onPick(r);
+      });
+      li.appendChild(btn);
+      listEl.appendChild(li);
+    }
+    listEl.hidden = false;
+  } catch (err) {
+    console.error("Geocode failed:", err);
+    errEl.textContent = err.message;
+    errEl.hidden = false;
+    listEl.hidden = true;
+  }
+}
+
+function syncWorkPicked() {
+  const has = !!state.work;
+  els.workPicked.hidden = !has;
+  els.workField.hidden = has;
+  if (has) els.workPickedLabel.textContent = state.work.label;
+}
+
+function setWork(work) {
+  state.work = work;
+  if (work) Store.set("work", work);
+  else Store.set("work", null);
+  syncWorkPicked();
+  updateCostSummary();
 }
 
 /* ---------- perbandingan 2 lokasi ---------- */
@@ -1158,6 +1264,66 @@ els.rentInput.addEventListener("input", () => {
   updateCostSummary();
 });
 
+// Stepper sewa: langkah Rp100.000, tidak boleh negatif. Nilai dan format
+// dijaga sama dengan jalur ketik supaya keduanya tidak berbeda.
+const RENT_STEP = 100000;
+els.rentStep.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-step]");
+  if (!btn) return;
+  state.rent = Math.max(0, state.rent + Number(btn.dataset.step) * RENT_STEP);
+  els.rentInput.value =
+    state.rent > 0 ? state.rent.toLocaleString(getLang() === "en" ? "en-US" : "id-ID") : "";
+  Store.set("rent", state.rent);
+  updateCostSummary();
+});
+
+let workTimer = null;
+els.workInput.addEventListener("input", () => {
+  clearTimeout(workTimer);
+  const q = els.workInput.value.trim();
+  if (q.length < 3) {
+    els.workResults.hidden = true;
+    return;
+  }
+  workTimer = setTimeout(
+    () => geocodeInto(q, els.workResults, els.workError, (r) =>
+      setWork({ lat: r.lat, lon: r.lon, label: r.name.split(",").slice(0, 2).join(",") })),
+    450
+  );
+});
+
+els.workInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    clearTimeout(workTimer);
+    const q = els.workInput.value.trim();
+    if (q.length >= 2) {
+      geocodeInto(q, els.workResults, els.workError, (r) =>
+        setWork({ lat: r.lat, lon: r.lon, label: r.name.split(",").slice(0, 2).join(",") }));
+    }
+  }
+  if (e.key === "Escape") els.workResults.hidden = true;
+});
+
+// GPS memakai jalur yang sama dengan "arahin" POI (termasuk Capacitor native).
+els.workGps.addEventListener("click", async () => {
+  els.workError.hidden = true;
+  els.workGps.disabled = true;
+  try {
+    const coords = await getUserLocation();
+    setWork({ lat: coords.lat, lon: coords.lon, label: t("cost.workGpsLabel") });
+  } catch (code) {
+    els.workError.textContent = t(code === "denied" ? "poi.locDenied" : "poi.locFail");
+    els.workError.hidden = false;
+  } finally {
+    els.workGps.disabled = false;
+  }
+});
+
+els.workClear.addEventListener("click", () => {
+  els.workInput.value = "";
+  setWork(null);
+});
+
 els.compareSave.addEventListener("click", () => {
   const est = state.costEst;
   if (!est || !state.center) return;
@@ -1170,6 +1336,10 @@ els.compareSave.addEventListener("click", () => {
     subtotal: est.subtotal,
     low: est.range.low,
     high: est.range.high,
+    // titik tengah ongkos komuter, supaya vonis bisa dihitung ulang tanpa fetch
+    commute: state.commute ? state.commute.monthly : 0,
+    commuteLow: state.commute ? state.commute.low : 0,
+    commuteHigh: state.commute ? state.commute.high : 0,
   };
   // simpan maksimal 2: slot ketiga menggantikan yang paling lama
   state.compare = [...state.compare.slice(-1), snap];
@@ -1298,6 +1468,17 @@ async function init() {
 state.persona = Store.get("persona", "umum");
 if (!PERSONAS.includes(state.persona)) state.persona = "umum";
 syncPersonaChips();
+
+// Sewa & lokasi kerja dipulihkan dari penyimpanan lokal.
+state.rent = Number(Store.get("rent", 0)) || 0;
+if (state.rent > 0) {
+  els.rentInput.value = state.rent.toLocaleString(getLang() === "en" ? "en-US" : "id-ID");
+}
+const savedWork = Store.get("work", null);
+if (savedWork && typeof savedWork.lat === "number" && typeof savedWork.lon === "number") {
+  state.work = savedWork;
+}
+syncWorkPicked();
 
 applyI18n();
 applyStaticExtras();

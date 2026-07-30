@@ -18,10 +18,10 @@
   </script>
   <link rel="preload" href="vendor/fonts/outfit-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
-  <link rel="stylesheet" href="css/tokens.css?v=4">
-  <link rel="stylesheet" href="css/base.css?v=4">
-  <link rel="stylesheet" href="css/components.css?v=4">
-  <link rel="stylesheet" href="css/app.css?v=4">
+  <link rel="stylesheet" href="css/tokens.css?v=5">
+  <link rel="stylesheet" href="css/base.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <link rel="stylesheet" href="css/app.css?v=5">
 
   <!-- PWA: bisa "Tambah ke Layar Utama" di HP, tampil seperti app -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -304,34 +304,93 @@
         </div>
 
         <div id="cost-view" hidden>
+        <div class="cost-head-row">
+          <a class="icon-btn" href="#/menu" data-i18n-attr="aria-label:nav.back;title:nav.back">
+            <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#chevron-left"></use></svg>
+          </a>
+          <p class="screen-title" data-i18n="cost.headTitle">Hitung Biaya Tinggal</p>
+        </div>
+
         <div class="verdict-mini">
-          <span class="vm-score" id="mini-score">0</span>
+          <span class="vm-score tnum" id="mini-score">0</span>
           <div class="vm-meta">
             <p class="vm-band" id="mini-band"></p>
             <p class="vm-caption" id="mini-caption"></p>
           </div>
         </div>
-        <div class="cost-card">
-          <div class="cost-head">
-            <p class="cost-title" data-i18n="cost.title">Biaya Lokasi Bulanan</p>
-            <span class="cost-hint" data-i18n="cost.hint">estimasi, bukan angka pasti</span>
+
+        <p class="group-label" data-i18n="cost.rentLabel">Sewa per bulan (Rp)</p>
+        <div class="stepper" id="rent-step">
+          <input id="rent-input" type="text" inputmode="numeric"
+                 placeholder="mis. 1.200.000" autocomplete="off"
+                 data-i18n-attr="placeholder:cost.rentPlaceholder;aria-label:cost.rentLabel"
+                 aria-describedby="cost-disclaimer">
+          <div class="stepper-btns">
+            <button type="button" data-step="-1" data-i18n-attr="aria-label:cost.rentDown;title:cost.rentDown">
+              <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#minus"></use></svg>
+            </button>
+            <button type="button" data-step="1" data-i18n-attr="aria-label:cost.rentUp;title:cost.rentUp">
+              <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#plus"></use></svg>
+            </button>
           </div>
-          <label class="rent-field" for="rent-input">
-            <span data-i18n="cost.rentLabel">Sewa per bulan (Rp)</span>
-            <input id="rent-input" type="text" inputmode="numeric"
-                   placeholder="mis. 1.200.000" autocomplete="off"
-                   data-i18n-attr="placeholder:cost.rentPlaceholder"
-                   aria-describedby="cost-disclaimer">
-          </label>
-          <ul class="cost-lines" id="cost-lines"></ul>
-          <ul class="cost-notes" id="cost-notes"></ul>
-          <div class="cost-summary" id="cost-summary" hidden>
+        </div>
+
+        <p class="group-label" data-i18n="cost.workLabel">Lokasi kerja/kampus</p>
+        <div class="work-block">
+          <div class="work-row">
+            <div class="search-field work-field">
+              <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#magnifying-glass"></use></svg>
+              <input id="work-input" type="search" autocomplete="off"
+                     data-i18n-attr="placeholder:cost.workPlaceholder;aria-label:cost.workLabel"
+                     enterkeyhint="search">
+            </div>
+            <button type="button" class="icon-btn" id="work-gps"
+                    data-i18n-attr="aria-label:cost.workGps;title:cost.workGps">
+              <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#crosshair-simple"></use></svg>
+            </button>
+          </div>
+          <ul class="search-results" id="work-results" role="listbox" hidden></ul>
+          <p class="search-error" id="work-error" role="alert" hidden></p>
+          <p class="work-picked" id="work-picked" hidden>
+            <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#map-pin"></use></svg>
+            <span id="work-picked-label"></span>
+            <button type="button" class="work-clear" id="work-clear" data-i18n="cost.workClear">ganti</button>
+          </p>
+        </div>
+
+        <div class="card-dark total-card" id="total-card">
+          <p class="cd-label" data-i18n="cost.totalCardLabel">Estimasi total per bulan</p>
+          <p class="cd-value" id="cost-total">Rp 0</p>
+          <div class="cd-rows" id="cost-summary" hidden>
             <div class="row"><span data-i18n="cost.rowRent">Sewa</span><strong id="cost-rent"></strong></div>
             <div class="row"><span data-i18n="cost.rowExtra">Estimasi ongkos tambahan</span><strong id="cost-extra"></strong></div>
-            <div class="row total"><span data-i18n="cost.totalLabel">Perkiraan total per bulan</span><strong id="cost-total"></strong></div>
+            <div class="row" id="commute-row" hidden><span id="commute-row-label"></span><strong id="commute-row-value"></strong></div>
           </div>
-          <p class="cost-disclaimer" id="cost-disclaimer"></p>
+          <p class="cd-prompt" id="need-work" hidden>
+            <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#map-pin"></use></svg>
+            <span data-i18n="cost.needWork">Isi lokasi kerja/kampus buat hitung ongkos komuter</span>
+          </p>
+        </div>
+
+        <div class="stat-row commute-stats" id="commute-stats" hidden>
+          <div class="stat-tile">
+            <p class="st-label" data-i18n="cost.commuteCost">Ongkos komuter / bulan</p>
+            <p class="st-value" id="commute-cost">-</p>
+          </div>
+          <div class="stat-tile">
+            <p class="st-label" data-i18n="cost.commuteTime">Biaya waktu</p>
+            <p class="st-value" id="commute-time">-</p>
+          </div>
+        </div>
+
+        <p class="section-title" data-i18n="cost.title">Biaya Lokasi Bulanan</p>
+        <ul class="cost-lines" id="cost-lines"></ul>
+        <ul class="cost-notes" id="cost-notes"></ul>
+        <p class="cost-disclaimer" id="cost-disclaimer"></p>
+        <p class="cost-footnote" id="cost-footnote"></p>
+        <div class="cost-ctas">
           <button type="button" class="compare-btn" id="compare-save" data-i18n="cost.saveCompare">Simpan untuk perbandingan</button>
+          <a class="sheet-cta" href="#/banding" data-i18n="cost.compareCta">Bandingkan lokasi lain</a>
         </div>
         </div>
 
@@ -367,11 +426,12 @@
 </nav>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>
-<script src="js/i18n.js?v=4"></script>
-<script src="js/store.js?v=4"></script>
-<script src="js/format.js?v=4"></script>
-<script src="js/persona.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/i18n.js?v=5"></script>
+<script src="js/store.js?v=5"></script>
+<script src="js/format.js?v=5"></script>
+<script src="js/persona.js?v=5"></script>
+<script src="js/cost.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
 <script>
   // Daftarkan service worker HANYA di browser (bukan WebView Capacitor,
   // supaya tidak bentrok dengan bridge native).
