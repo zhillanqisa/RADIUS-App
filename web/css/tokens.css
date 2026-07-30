@@ -1,0 +1,182 @@
+/* RADIUS - design tokens ("Alur Lengkap" redesign)
+   Cream + deep-green + lime civic identity. New values are re-pointed onto the
+   EXISTING custom-property names so existing rules keep working; new names are
+   additive. Both dark paths reassign the same list:
+   (a) OS gelap tanpa override manual light; (b) data-theme="dark" paksa.
+   Sumber: docs/superpowers/specs/2026-07-30-walkability-redesign-design.md */
+
+@font-face {
+  font-family: "Outfit";
+  src: url("../vendor/fonts/outfit-variable.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+:root {
+  /* Satu typeface untuk dua peran. Kanvas desain memakai Space Grotesk dari
+     CDN Google Fonts, tapi app ini keyless + offline (precache PWA) dan
+     mem-vendor semua aset -- Outfit 700 dengan tracking rapat mengisi peran
+     display. Ganti ke Space Grotesk = vendor woff2 + ubah --font-display saja. */
+  --font-body: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --ink: #1c2116;
+  --ink-2: #5c6862;
+  --ink-3: #79847e;
+  --ink-4: #8a948e;
+
+  --surface: #f3f1e6;      /* cream, latar utama */
+  --surface-2: #eef0ec;    /* latar landing / halaman lebih dingin */
+  --card: #ffffff;
+  --line: #eef0ec;
+  --line-2: #e3e7e2;
+
+  --accent: #0f2e22;       /* hijau tua pekat (kartu total, tombol utama) */
+  --accent-ink: #0f2e22;   /* teks penegas DI ATAS latar terang */
+  --on-accent: #ffffff;    /* teks DI ATAS --accent solid */
+  --accent-soft: #e2eee7;
+  --accent-soft-ink: #0e7d5e;
+
+  --lime: #d6e84a;         /* aksen aktif: tab aktif, badge, chip terpilih */
+  --lime-ink: #1c2116;
+  --olive: #3d4a1f;        /* vonis netral (selisih tipis) */
+  --spark: #d1531f;        /* titik oranye pada logo */
+
+  --chrome: #1c2116;       /* nav bawah + pil gelap di atas peta */
+  --chrome-ink: #aeb8a2;
+
+  --radius: 12px;
+  --r-pill: 999px;
+  --r-card: 16px;
+  --r-card-lg: 20px;
+  --r-sheet: 24px;
+
+  --sh-1: 0 6px 16px rgba(28, 33, 22, 0.05);
+  --sh-2: 0 10px 26px rgba(28, 33, 22, 0.08);
+  --sh-sheet: 0 -12px 30px rgba(28, 33, 22, 0.10);
+
+  /* status semantik */
+  --good: #0e7d5e;
+  --warn: #8a6a14;
+  --bad: #a83b2f;
+  --bad-2: #8f3f24;
+
+  /* status pill kategori */
+  --ok-bg: #eef6f0;   --ok-ink: #0e7d5e;
+  --warn-bg: #f8f6ef; --warn-ink: #8a6a14;
+  --bad-bg: #f8f2ee;  --bad-ink: #8f3f24;
+  --bad-line: #e3b8ab;   /* garis tepi hangat pada kategori bermasalah */
+  --good-bg: #eef6f0;
+
+  /* band skor: dipakai sebagai WARNA TEKS -> harus lolos AA di atas --card.
+     Sengaja BUKAN warna gauge: amber gauge (#e3b23a) gagal AA sebagai teks. */
+  --band-low: #a83b2f;
+  --band-mid: #8a6a14;
+  --band-high: #0e7d5e;
+
+  /* gauge "susah -> semua dekat": dipakai sebagai gradien, bukan teks */
+  --gauge-low: #c8493a;
+  --gauge-mid: #e3b23a;
+  --gauge-high: #0e7d5e;
+  --seg-low: #c8493a;
+  --seg-mid: #e3b23a;
+  --seg-high: #0e7d5e;
+
+  /* warna kategori: SENGAJA tidak berubah di redesign ini dan identik di
+     kedua tema -- legend peta harus tetap sama. */
+  --cat-warung: #b3791e;
+  --cat-kuliner: #c75b39;
+  --cat-sekolah: #3b6fb5;
+  --cat-faskes: #c24b57;
+  --cat-transit: #6e5ba6;
+  --cat-taman: #4e8a4e;
+  --cat-ibadah: #3e8e9c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #eef0ec;
+    --ink-2: #aeb8b0;
+    --ink-3: #8a948e;
+    --ink-4: #6b756e;
+    --surface: #161d18;
+    --surface-2: #121814;
+    --card: #22291f;
+    --line: #2c342a;
+    --line-2: #333c31;
+    --accent: #9dc3ae;
+    --accent-ink: #9dc3ae;
+    --on-accent: #12251d;
+    --accent-soft: #233d33;
+    --accent-soft-ink: #a9d8c2;
+    --lime: #9dc3ae;
+    --lime-ink: #12251d;
+    --olive: #4a5a27;
+    --chrome: #0c110d;
+    --chrome-ink: #6b756e;
+    --sh-1: 0 6px 16px rgba(0, 0, 0, 0.35);
+    --sh-2: 0 10px 26px rgba(0, 0, 0, 0.45);
+    --sh-sheet: 0 -12px 30px rgba(0, 0, 0, 0.45);
+    --good: #a9d8c2;
+    --warn: #e3c268;
+    --bad: #e08672;
+    --bad-2: #f0b9a6;
+    --ok-bg: #233d33;   --ok-ink: #a9d8c2;
+    --warn-bg: #3a3320; --warn-ink: #e3c268;
+    --bad-bg: #3d2a23;  --bad-ink: #f0b9a6;
+    --bad-line: #6e4636;
+    --good-bg: #233d33;
+    --band-low: #f0b9a6;
+    --band-mid: #e3c268;
+    --band-high: #a9d8c2;
+    --gauge-low: #8f4636;
+    --gauge-mid: #a8862f;
+    --gauge-high: #3f6152;
+    --seg-low: #8f4636;
+    --seg-mid: #a8862f;
+    --seg-high: #3f6152;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #eef0ec;
+  --ink-2: #aeb8b0;
+  --ink-3: #8a948e;
+  --ink-4: #6b756e;
+  --surface: #161d18;
+  --surface-2: #121814;
+  --card: #22291f;
+  --line: #2c342a;
+  --line-2: #333c31;
+  --accent: #9dc3ae;
+  --accent-ink: #9dc3ae;
+  --on-accent: #12251d;
+  --accent-soft: #233d33;
+  --accent-soft-ink: #a9d8c2;
+  --lime: #9dc3ae;
+  --lime-ink: #12251d;
+  --olive: #4a5a27;
+  --chrome: #0c110d;
+  --chrome-ink: #6b756e;
+  --sh-1: 0 6px 16px rgba(0, 0, 0, 0.35);
+  --sh-2: 0 10px 26px rgba(0, 0, 0, 0.45);
+  --sh-sheet: 0 -12px 30px rgba(0, 0, 0, 0.45);
+  --good: #a9d8c2;
+  --warn: #e3c268;
+  --bad: #e08672;
+  --bad-2: #f0b9a6;
+  --ok-bg: #233d33;   --ok-ink: #a9d8c2;
+  --warn-bg: #3a3320; --warn-ink: #e3c268;
+  --bad-bg: #3d2a23;  --bad-ink: #f0b9a6;
+  --bad-line: #6e4636;
+  --good-bg: #233d33;
+  --band-low: #f0b9a6;
+  --band-mid: #e3c268;
+  --band-high: #a9d8c2;
+  --gauge-low: #8f4636;
+  --gauge-mid: #a8862f;
+  --gauge-high: #3f6152;
+  --seg-low: #8f4636;
+  --seg-mid: #a8862f;
+  --seg-high: #3f6152;
+}

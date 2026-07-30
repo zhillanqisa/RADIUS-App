@@ -1,125 +1,6 @@
-/* RADIUS - visual system v2 "Peta Utama"
-   Trust-first civic-tech. Peta jadi panggung utama, panel kerja mengambang,
-   verdict skor sebagai momen terkuat. Satu accent teal-biru (#124f5c),
-   satu sistem radius (12px, pill 999), Outfit self-hosted. WCAG AA. */
-
-@font-face {
-  font-family: "Outfit";
-  src: url("../vendor/fonts/outfit-variable.woff2") format("woff2");
-  font-weight: 300 700;
-  font-display: swap;
-}
-
-:root {
-  --ink: #161d1a;
-  --ink-2: #46524c;
-  --ink-3: #66716b;
-  --surface: #f4f6f4;
-  --card: #fdfdfc;
-  --line: #e3e7e2;
-
-  --accent: #124f5c;
-  --accent-ink: #0d3d47;
-  --accent-soft: #e2edef;
-
-  --chrome: #182420;      /* dock gelap di atas peta */
-  --chrome-ink: #b7c1ba;
-
-  --radius: 12px;
-
-  /* status pill kategori */
-  --ok-bg: #e2eee7;   --ok-ink: #0e5c48;
-  --warn-bg: #f4ecd6; --warn-ink: #7a5b18;
-  --bad-bg: #f6e4dd;  --bad-ink: #8f3f24;
-
-  /* band skor */
-  --band-low: #8f3f24;
-  --band-mid: #8a6a14;
-  --band-high: #0e5c48;
-  --seg-low: #d9b8a5;
-  --seg-mid: #e3cf9b;
-  --seg-high: #a9c9be;
-
-  /* warna kategori (muted, dipakai ikon + marker peta) */
-  --cat-warung: #b3791e;
-  --cat-kuliner: #c75b39;
-  --cat-sekolah: #3b6fb5;
-  --cat-faskes: #c24b57;
-  --cat-transit: #6e5ba6;
-  --cat-taman: #4e8a4e;
-  --cat-ibadah: #3e8e9c;
-}
-
-/* ---- mode gelap (DESIGN-SPEC Bag. 3-4) ----
-   Sama-sama me-reassign custom property semantik. Dua jalur:
-   (a) OS gelap TANPA override manual light; (b) data-theme="dark" paksa. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ink: #eef1ee;
-    --ink-2: #aeb8b0;
-    --ink-3: #8fa197;
-    --surface: #101815;
-    --card: #1c2823;
-    --line: #2c3a33;
-    --accent: #9dc3ae;
-    --accent-ink: #101815;
-    --accent-soft: #233d33;
-    --ok-bg: #233d33;   --ok-ink: #a9d8c2;
-    --warn-bg: #3a3320; --warn-ink: #e3c268;
-    --bad-bg: #3d2a23;  --bad-ink: #f0b9a6;
-    --band-low: #f0b9a6;
-    --band-mid: #e3c268;
-    --band-high: #a9d8c2;
-    --seg-low: #6e4636;
-    --seg-mid: #6d5e2f;
-    --seg-high: #3f6152;
-  }
-}
-:root[data-theme="dark"] {
-  --ink: #eef1ee;
-  --ink-2: #aeb8b0;
-  --ink-3: #8fa197;
-  --surface: #101815;
-  --card: #1c2823;
-  --line: #2c3a33;
-  --accent: #9dc3ae;
-  --accent-ink: #101815;
-  --accent-soft: #233d33;
-  --ok-bg: #233d33;   --ok-ink: #a9d8c2;
-  --warn-bg: #3a3320; --warn-ink: #e3c268;
-  --bad-bg: #3d2a23;  --bad-ink: #f0b9a6;
-  --band-low: #f0b9a6;
-  --band-mid: #e3c268;
-  --band-high: #a9d8c2;
-  --seg-low: #6e4636;
-  --seg-mid: #6d5e2f;
-  --seg-high: #3f6152;
-}
-
-* { box-sizing: border-box; }
-
-/* atribut hidden harus menang atas display rule mana pun */
-[hidden] { display: none !important; }
-
-html, body {
-  margin: 0;
-  height: 100%;
-  font-family: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: var(--ink);
-  background: var(--surface);
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-button { font: inherit; }
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.icon { width: 18px; height: 18px; fill: currentColor; flex: none; }
-.icon-lg { width: 30px; height: 30px; }
+/* RADIUS - komposisi layar, responsif, dan furnitur peta.
+   Token warna/tipografi ada di tokens.css, default elemen di base.css,
+   komponen lintas-layar di components.css. File ini hanya menyusun layar. */
 
 /* ---- kontrol bahasa & tema (DESIGN-SPEC Bag. 9) ---- */
 .ui-controls { display: flex; align-items: center; gap: 8px; }
@@ -313,7 +194,7 @@ input:focus-visible {
     padding: 12px;
   }
   .swipe-pane.pane-dark .sp-cta { background: #eef1ee; color: var(--chrome); }
-  .swipe-pane.pane-light .sp-cta { background: var(--accent); color: var(--accent-ink); }
+  .swipe-pane.pane-light .sp-cta { background: var(--accent); color: var(--on-accent); }
   .swipe-dots { display: flex; justify-content: center; gap: 7px; margin-top: 16px; }
   .swipe-dots span {
     width: 7px; height: 7px;
@@ -1142,7 +1023,7 @@ input:focus-visible {
     border: 1px solid var(--line);
     color: var(--ink);
   }
-  .sheet-cta.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .sheet-cta.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 
   /* saat sheet ringkas, sisakan hanya verdict + 3 kategori pertama */
   body[data-view="peta"] .panel:not(.sheet-full) .breakdown-head,
