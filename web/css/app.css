@@ -1324,3 +1324,81 @@
   font-size: 12px;
   color: var(--ink-3);
 }
+
+/* ---- header mengambang di atas peta + chip persona (kanvas f3) ---- */
+
+.map-top {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  z-index: 420;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  pointer-events: none;
+}
+.map-top > * { pointer-events: auto; }
+
+#bookmark-btn .icon-bm-on { display: none; }
+#bookmark-btn.is-on { background: var(--lime); color: var(--lime-ink); }
+#bookmark-btn.is-on .icon-bm-off { display: none; }
+#bookmark-btn.is-on .icon-bm-on { display: block; }
+
+.persona-row {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  z-index: 420;
+  padding: 2px 0;
+}
+
+/* Pin peta: label nama + skor, batang, lalu titik di koordinat (kanvas f3). */
+.center-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.center-pin .cp-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 60vw;
+  background: var(--chrome);
+  color: var(--lime);
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  box-shadow: 0 8px 18px rgba(28, 33, 22, 0.28);
+  white-space: nowrap;
+}
+.center-pin .cp-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--surface);
+}
+.center-pin .cp-div {
+  width: 1px;
+  height: 12px;
+  flex: none;
+  background: rgba(214, 232, 74, 0.35);
+}
+.center-pin .cp-score {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+.center-pin .cp-stem { width: 2px; height: 14px; background: var(--chrome); }
+.center-pin .cp-dot {
+  width: 10px; height: 10px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: var(--chrome);
+}
+
+/* Gauge duduk di dalam sheet, tidak lagi mengambang di atas peta. */
+.verdict-card .gauge { margin-top: 12px; }

@@ -18,10 +18,10 @@
   </script>
   <link rel="preload" href="vendor/fonts/outfit-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
-  <link rel="stylesheet" href="css/tokens.css?v=3">
-  <link rel="stylesheet" href="css/base.css?v=3">
-  <link rel="stylesheet" href="css/components.css?v=3">
-  <link rel="stylesheet" href="css/app.css?v=3">
+  <link rel="stylesheet" href="css/tokens.css?v=4">
+  <link rel="stylesheet" href="css/base.css?v=4">
+  <link rel="stylesheet" href="css/components.css?v=4">
+  <link rel="stylesheet" href="css/app.css?v=4">
 
   <!-- PWA: bisa "Tambah ke Layar Utama" di HP, tampil seperti app -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -164,6 +164,26 @@
   <main class="map-wrap">
     <div id="map" aria-label="Peta interaktif"></div>
 
+    <div class="map-top">
+      <a class="icon-btn" href="#/menu" data-i18n-attr="aria-label:nav.back;title:nav.back">
+        <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#chevron-left"></use></svg>
+      </a>
+      <button type="button" class="icon-btn" id="bookmark-btn"
+              data-i18n-attr="aria-label:save.add;title:save.add" aria-pressed="false">
+        <svg class="icon icon-bm-off icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#bookmark"></use></svg>
+        <svg class="icon icon-bm-on" aria-hidden="true"><use href="vendor/icons/sprite.svg#bookmark-fill"></use></svg>
+      </button>
+    </div>
+
+    <div class="chip-row persona-row" id="persona-row" role="radiogroup"
+         data-i18n-attr="aria-label:persona.label">
+      <button type="button" class="chip" role="radio" data-persona="umum" aria-checked="true" data-i18n="persona.umum">Umum</button>
+      <button type="button" class="chip" role="radio" data-persona="keluarga" aria-checked="false" data-i18n="persona.keluarga">Keluarga</button>
+      <button type="button" class="chip" role="radio" data-persona="mahasiswa" aria-checked="false" data-i18n="persona.mahasiswa">Mahasiswa</button>
+      <button type="button" class="chip" role="radio" data-persona="lansia" aria-checked="false" data-i18n="persona.lansia">Lansia</button>
+      <button type="button" class="chip" role="radio" data-persona="pekerja" aria-checked="false" data-i18n="persona.pekerja">Pekerja</button>
+    </div>
+
     <div class="duration-dock">
       <div class="segmented" role="radiogroup" aria-label="Durasi jalan kaki dan skor per durasi" id="duration-group">
         <button type="button" role="radio" aria-checked="false" data-minutes="5">
@@ -253,15 +273,16 @@
             <div class="verdict-meta">
               <p class="score-band" id="score-band">&nbsp;</p>
               <p class="verdict-gap" id="verdict-gap"></p>
+              <span class="badge badge-persona" id="persona-badge" hidden></span>
             </div>
           </div>
-          <div class="band-scale" role="img" aria-label="Posisi skor pada skala 0 sampai 100">
-            <div class="band-track">
-              <i class="seg-low"></i><i class="seg-mid"></i><i class="seg-high"></i>
+          <div class="gauge" role="img" data-i18n-attr="aria-label:gauge.aria">
+            <div class="gauge-ends">
+              <span data-i18n="gauge.low">Susah tanpa kendaraan</span>
+              <span data-i18n="gauge.high">Semua dekat</span>
             </div>
-            <div class="band-marker-lane"><span class="band-marker" id="ring-value"></span></div>
-            <div class="band-labels">
-              <span data-i18n="result.scaleLow">0 susah tanpa kendaraan</span><span data-i18n="result.scaleMid">40 cukup</span><span data-i18n="result.scaleHigh">100 semua dekat</span>
+            <div class="gauge-track">
+              <span class="gauge-marker" id="ring-value"></span>
             </div>
           </div>
           <p class="score-cached" id="score-cached" hidden>
@@ -346,10 +367,11 @@
 </nav>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>
-<script src="js/i18n.js?v=3"></script>
-<script src="js/store.js?v=3"></script>
-<script src="js/format.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/i18n.js?v=4"></script>
+<script src="js/store.js?v=4"></script>
+<script src="js/format.js?v=4"></script>
+<script src="js/persona.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 <script>
   // Daftarkan service worker HANYA di browser (bukan WebView Capacitor,
   // supaya tidak bentrok dengan bridge native).

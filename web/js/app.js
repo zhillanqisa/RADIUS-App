@@ -79,6 +79,9 @@ const els = {
   recoCard: document.getElementById("reco-card"),
   recentList: document.getElementById("recent-list"),
   recentEmpty: document.getElementById("recent-empty"),
+  personaRow: document.getElementById("persona-row"),
+  personaBadge: document.getElementById("persona-badge"),
+  bookmarkBtn: document.getElementById("bookmark-btn"),
 };
 
 const state = {
@@ -93,6 +96,7 @@ const state = {
   lastData: null,  // payload terakhir, untuk re-render saat ganti bahasa/tema
   lastScore: null,
   demoLocations: [],  // dari /api/config, fallback kartu rekomendasi Beranda
+  persona: "umum",    // bobot kategori yang dipakai untuk menimbang skor
 };
 
 let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
@@ -332,15 +336,92 @@ map.on("click", (e) => {
   runAnalysis(e.lngLat.lat, e.lngLat.lng);
 });
 
+// Pin peta menggabungkan nama lokasi + skor dalam satu label (kanvas f3).
+// Dibuat sebagai Marker DOM, bukan symbol layer, supaya selamat dari setStyle()
+// saat ganti tema -- marker tidak dibuang seperti custom layer.
 let centerMarker = null;
-function setCenterMarker(lat, lon) {
+function setCenterLabel(lat, lon, label, score, bandVar) {
   if (centerMarker) centerMarker.remove();
   const el = document.createElement("div");
   el.className = "center-pin";
-  centerMarker = new maplibregl.Marker({ element: el, anchor: "center" })
+  el.innerHTML = `<span class="cp-pill">
+      <span class="cp-name"></span><i class="cp-div"></i><span class="cp-score tnum"></span>
+    </span>
+    <span class="cp-stem"></span>
+    <span class="cp-dot"></span>`;
+  el.querySelector(".cp-name").textContent = label || "";
+  const scoreEl = el.querySelector(".cp-score");
+  const divEl = el.querySelector(".cp-div");
+  if (score == null) {
+    scoreEl.hidden = true;
+    divEl.hidden = true;
+  } else {
+    scoreEl.textContent = String(score);
+    scoreEl.style.color = cssVal(bandVar);
+  }
+  if (!label) el.querySelector(".cp-pill").hidden = true;
+  // anchor "bottom": titiknya yang menempel pada koordinat, bukan tengah label.
+  centerMarker = new maplibregl.Marker({ element: el, anchor: "bottom" })
     .setLngLat([lon, lat])
     .addTo(map);
 }
+
+// Dipakai saat titik baru dipilih tapi skornya belum diketahui.
+function setCenterMarker(lat, lon) {
+  setCenterLabel(lat, lon, state.locationLabel, null, "--band-mid");
+}
+
+/* ---------- persona (kanvas f3b) ---------- */
+
+function syncPersonaChips() {
+  for (const btn of els.personaRow.querySelectorAll("button[data-persona]")) {
+    const on = btn.dataset.persona === state.persona;
+    btn.setAttribute("aria-checked", String(on));
+    btn.classList.toggle("is-on", on);
+  }
+}
+
+els.personaRow.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-persona]");
+  if (!btn || btn.dataset.persona === state.persona) return;
+  state.persona = btn.dataset.persona;
+  Store.set("persona", state.persona);
+  syncPersonaChips();
+  // Tidak perlu fetch ulang: penimbangan ulang murni di klien.
+  if (state.lastData) renderResult(state.lastData, { refetchDock: false });
+});
+
+/* ---------- simpan lokasi (bookmark) ---------- */
+
+function currentEntry() {
+  if (!state.center) return null;
+  return {
+    label: state.locationLabel || t("result.captionFallback"),
+    kelurahan: "",
+    lat: state.center.lat,
+    lon: state.center.lon,
+    minutes: state.minutes,
+    score: state.lastScore ?? 0,
+    band: state.lastData ? bandFor(state.lastScore ?? 0).labelKey : "",
+    total: null,
+    at: new Date().toISOString(),
+  };
+}
+
+function syncBookmark(on) {
+  els.bookmarkBtn.classList.toggle("is-on", !!on);
+  els.bookmarkBtn.setAttribute("aria-pressed", String(!!on));
+  const key = on ? "save.remove" : "save.add";
+  els.bookmarkBtn.setAttribute("aria-label", t(key));
+  els.bookmarkBtn.setAttribute("title", t(key));
+}
+
+els.bookmarkBtn.addEventListener("click", () => {
+  const entry = currentEntry();
+  if (!entry || !state.lastData) return;
+  syncBookmark(Store.toggleSaved(entry));
+  renderBeranda(); // hitungan "tersimpan" di Beranda ikut berubah
+});
 
 function fitIsochrone(geometry) {
   const b = geomBounds(geometry);
@@ -729,8 +810,11 @@ function renderResult(data, opts) {
   const refetchDock = !opts || opts.refetchDock !== false;
   state.lastData = data;
 
-  const score = Math.round(data.score);
-  const band = bandFor(data.score);
+  // Timbang ulang menurut persona aktif. Persona "umum" mengembalikan angka
+  // server apa adanya, jadi jalur default tidak berubah sama sekali.
+  const view = rescore(data, state.persona);
+  const score = Math.round(view.score);
+  const band = bandFor(view.score);
   const bandColor = cssVal(band.cssVar);
 
   // verdict
@@ -743,7 +827,7 @@ function renderResult(data, opts) {
   els.scoreBand.textContent = t(band.labelKey);
   els.scoreBand.style.color = bandColor;
 
-  const items = Object.entries(data.breakdown)
+  const items = Object.entries(view.breakdown)
     .filter(([key]) => CATEGORY_META[key])
     .map(([key, item]) => ({ key, ...item }));
   const missing = items.filter((i) => i.count === 0).length;
@@ -756,8 +840,16 @@ function renderResult(data, opts) {
     els.verdictGap.textContent = t("result.gap.some", { n: missing, total: items.length });
   }
 
-  // marker pada skala band 0-100
-  els.ringValue.style.left = `${Math.max(0, Math.min(100, data.score))}%`;
+  // penanda pada gauge 0-100 (skor persona, bukan skor server)
+  els.ringValue.style.left = `${Math.max(0, Math.min(100, view.score))}%`;
+
+  // Badge "Disesuaikan untuk: X" hanya saat persona bukan default.
+  els.personaBadge.hidden = state.persona === "umum";
+  if (state.persona !== "umum") {
+    els.personaBadge.textContent = t("persona.adjusted", {
+      persona: t("persona." + state.persona),
+    });
+  }
 
   els.scoreCached.hidden = !(data.cached && data.source === "live");
 
@@ -781,6 +873,12 @@ function renderResult(data, opts) {
   els.breakdownTitle.textContent =
     missing > 0 ? t("result.breakdown.gapTitle") : t("result.breakdown.title");
   items.sort((a, b) => (b.weight - b.score) - (a.weight - a.score) || b.weight - a.weight);
+
+  // Kategori yang paling ditimbang persona aktif: kalau justru bermasalah,
+  // beri garis tepi hangat supaya langsung tertangkap mata (kanvas f3b).
+  const personaFocus = state.persona === "umum"
+    ? []
+    : personaTopCategories(state.persona, 2);
 
   els.categoryList.replaceChildren();
   items.forEach((item, idx) => {
@@ -815,13 +913,25 @@ function renderResult(data, opts) {
       status.textContent = t("cat.status.ok", { n: item.count });
       status.classList.add("is-ok");
     }
+    if (item.count <= 1 && personaFocus.includes(item.key)) {
+      li.classList.add("row-persona");
+    }
     els.categoryList.appendChild(li);
   });
 
   // layer peta (MapLibre GeoJSON sources)
   setIsochrone(data.isochrone);
   setPois(data.pois);
-  setCenterMarker(data.center.lat, data.center.lon);
+  setCenterLabel(
+    data.center.lat,
+    data.center.lon,
+    state.locationLabel || t("result.captionFallback"),
+    score,
+    band.cssVar
+  );
+  syncBookmark(Store.isSaved({
+    lat: data.center.lat, lon: data.center.lon, minutes: data.minutes,
+  }));
   if (refetchDock) fitIsochrone(data.isochrone);
 
   showState("result");
@@ -1182,6 +1292,12 @@ async function init() {
     console.error("Config load failed:", err);
   }
 }
+
+// Persona tersimpan dipulihkan sebelum render pertama; nilai tak dikenal
+// (mis. dari versi lama) jatuh ke default supaya rescore tidak salah bobot.
+state.persona = Store.get("persona", "umum");
+if (!PERSONAS.includes(state.persona)) state.persona = "umum";
+syncPersonaChips();
 
 applyI18n();
 applyStaticExtras();
