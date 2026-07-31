@@ -18,10 +18,10 @@
   </script>
   <link rel="preload" href="vendor/fonts/outfit-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
-  <link rel="stylesheet" href="css/tokens.css?v=6">
-  <link rel="stylesheet" href="css/base.css?v=6">
-  <link rel="stylesheet" href="css/components.css?v=6">
-  <link rel="stylesheet" href="css/app.css?v=6">
+  <link rel="stylesheet" href="css/tokens.css?v=7">
+  <link rel="stylesheet" href="css/base.css?v=7">
+  <link rel="stylesheet" href="css/components.css?v=7">
+  <link rel="stylesheet" href="css/app.css?v=7">
 
   <!-- PWA: bisa "Tambah ke Layar Utama" di HP, tampil seperti app -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -213,6 +213,96 @@
         <p class="es-body" data-i18n="compare.emptyBody">Analisis sebuah lokasi, isi sewanya di Hitung Biaya Tinggal, lalu simpan untuk perbandingan.</p>
         <a class="dark-btn" href="#/peta" data-i18n="compare.emptyCta">Cek Lokasi Sekarang</a>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tersimpan & Riwayat (kanvas f8a-f8c). Diakses lewat ikon jam di nav bawah. -->
+<div class="screen has-tabbar" id="tersimpan-screen" data-screen="tersimpan">
+  <div class="screen-inner">
+    <p class="screen-title-lg" data-i18n="saved.title">Tersimpan</p>
+
+    <div class="segmented-pill saved-tabs" role="radiogroup" data-i18n-attr="aria-label:saved.title">
+      <button type="button" role="radio" id="tab-saved" data-tab="saved" aria-checked="true" data-i18n="saved.tabSaved">Lokasi Tersimpan</button>
+      <button type="button" role="radio" id="tab-history" data-tab="history" aria-checked="false" data-i18n="saved.tabHistory">Riwayat</button>
+    </div>
+
+    <div id="saved-pane">
+      <div class="saved-list" id="saved-list"></div>
+      <div class="empty-state" id="saved-empty" hidden>
+        <span class="es-glyph" aria-hidden="true">
+          <svg class="icon icon-stroke"><use href="vendor/icons/sprite.svg#bookmark"></use></svg>
+        </span>
+        <p class="es-title" data-i18n="saved.emptyTitle">Belum ada lokasi tersimpan</p>
+        <p class="es-body" data-i18n="saved.emptyBody">Simpan lokasi dari halaman Cek Lokasi biar gampang dibandingkan lagi nanti.</p>
+        <a class="dark-btn" href="#/peta" data-i18n="saved.emptyCta">Cek Lokasi Sekarang</a>
+      </div>
+    </div>
+
+    <div id="history-pane" hidden>
+      <div class="timeline" id="history-list"></div>
+      <div class="empty-state" id="history-empty" hidden>
+        <span class="es-glyph" aria-hidden="true">
+          <svg class="icon"><use href="vendor/icons/sprite.svg#clock"></use></svg>
+        </span>
+        <p class="es-title" data-i18n="history.emptyTitle">Belum ada riwayat</p>
+        <p class="es-body" data-i18n="history.emptyBody">Lokasi yang kamu cek akan muncul di sini, terbaru di atas.</p>
+        <a class="dark-btn" href="#/peta" data-i18n="saved.emptyCta">Cek Lokasi Sekarang</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pengaturan (kanvas f6/f6b). Grup "Akun" sengaja tidak ada: belum ada akun
+     di versi ini, jadi jangan tampilkan tombol Keluar yang tidak berfungsi. -->
+<div class="screen has-tabbar" id="pengaturan-screen" data-screen="pengaturan">
+  <div class="screen-inner">
+    <div class="screen-head">
+      <a class="icon-btn" href="#/menu" data-i18n-attr="aria-label:nav.back;title:nav.back">
+        <svg class="icon icon-stroke" aria-hidden="true"><use href="vendor/icons/sprite.svg#chevron-left"></use></svg>
+      </a>
+      <p class="screen-title" data-i18n="set.title">Pengaturan</p>
+    </div>
+
+    <p class="group-label" data-i18n="set.groupDisplay">Tampilan</p>
+    <div class="set-group">
+      <div class="set-row set-row-stack">
+        <span class="set-key" data-i18n="set.theme">Tema</span>
+        <div class="segmented-pill in-card" id="theme-seg" role="radiogroup" data-i18n-attr="aria-label:set.theme">
+          <button type="button" role="radio" data-theme-mode="auto" aria-checked="true" data-i18n="set.themeAuto">Otomatis</button>
+          <button type="button" role="radio" data-theme-mode="light" aria-checked="false" data-i18n="set.themeLight">Terang</button>
+          <button type="button" role="radio" data-theme-mode="dark" aria-checked="false" data-i18n="set.themeDark">Gelap</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-key" data-i18n="set.lang">Bahasa</span>
+        <div class="lang-pill" role="group" aria-label="Bahasa">
+          <button type="button" data-lang="id" aria-pressed="true">ID</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="group-label" data-i18n="set.groupData">Data</p>
+    <div class="set-group">
+      <div class="set-row set-row-stack">
+        <span class="set-key" data-i18n="set.mapSource">Sumber peta</span>
+        <p class="set-sub" data-i18n="set.mapSourceSub">OpenStreetMap · diperbarui berkala</p>
+      </div>
+      <button type="button" class="set-row set-row-btn" id="clear-history">
+        <span class="set-key is-danger" data-i18n="set.clearHistory">Hapus riwayat lokasi</span>
+        <svg class="icon icon-stroke is-danger" aria-hidden="true"><use href="vendor/icons/sprite.svg#chevron-right"></use></svg>
+      </button>
+      <p class="set-done" id="clear-history-done" hidden data-i18n="set.clearHistoryDone">Riwayat lokasi dihapus.</p>
+    </div>
+
+    <div class="set-foot">
+      <svg class="logo-ring" viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+        <circle class="lr-track" cx="50" cy="50" r="40"></circle>
+        <circle class="lr-arc" cx="50" cy="50" r="40" transform="rotate(-90 50 50)"></circle>
+        <circle class="lr-dot" cx="50" cy="10" r="9"></circle>
+      </svg>
+      <p class="set-version" data-i18n="set.version">RADIUS versi 1.0 · dibuat untuk kota yang bisa dijalani kaki</p>
     </div>
   </div>
 </div>
@@ -477,12 +567,12 @@
 </nav>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>
-<script src="js/i18n.js?v=6"></script>
-<script src="js/store.js?v=6"></script>
-<script src="js/format.js?v=6"></script>
-<script src="js/persona.js?v=6"></script>
-<script src="js/cost.js?v=6"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/i18n.js?v=7"></script>
+<script src="js/store.js?v=7"></script>
+<script src="js/format.js?v=7"></script>
+<script src="js/persona.js?v=7"></script>
+<script src="js/cost.js?v=7"></script>
+<script src="js/app.js?v=7"></script>
 <script>
   // Daftarkan service worker HANYA di browser (bukan WebView Capacitor,
   // supaya tidak bentrok dengan bridge native).

@@ -108,6 +108,16 @@ const els = {
   compareError: document.getElementById("compare-error"),
   compareErrorTitle: document.getElementById("compare-error-title"),
   compareBody: document.getElementById("compare-body"),
+  savedTabs: document.querySelector(".saved-tabs"),
+  savedPane: document.getElementById("saved-pane"),
+  historyPane: document.getElementById("history-pane"),
+  savedList: document.getElementById("saved-list"),
+  savedEmpty: document.getElementById("saved-empty"),
+  historyList: document.getElementById("history-list"),
+  historyEmpty: document.getElementById("history-empty"),
+  themeSeg: document.getElementById("theme-seg"),
+  clearHistory: document.getElementById("clear-history"),
+  clearHistoryDone: document.getElementById("clear-history-done"),
 };
 
 const state = {
@@ -125,6 +135,7 @@ const state = {
   persona: "umum",    // bobot kategori yang dipakai untuk menimbang skor
   work: null,         // {lat, lon, label} lokasi kerja/kampus
   commute: null,      // hasil commuterCost() terakhir
+  savedTab: "saved",  // "saved" | "history" pada layar #/tersimpan
 };
 
 let compareToken = 0; // membatalkan update skor durasi lain saat titik berganti
@@ -160,11 +171,40 @@ function applyTheme() {
   if (state.lastData) renderResult(state.lastData, { refetchDock: false });
 }
 
-function toggleTheme() {
-  const next = isDark() ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", next);
-  try { localStorage.setItem("radius_theme", next); } catch (e) { /* abaikan */ }
+/* Tema 3 arah: Otomatis / Terang / Gelap (kanvas f6).
+   "auto" berarti atribut data-theme DIHAPUS, jadi prefers-color-scheme yang
+   menentukan. Nilainya ditulis MENTAH (bukan JSON) ke localStorage supaya
+   skrip pra-paint di <head> -- yang membaca string apa adanya dan mencegah
+   kedipan tema -- tidak perlu diubah sama sekali. */
+function themeMode() {
+  let raw = null;
+  try { raw = localStorage.getItem("radius_theme"); } catch (e) { /* abaikan */ }
+  return raw === "light" || raw === "dark" ? raw : "auto";
+}
+
+function setThemeMode(mode) {
+  const m = mode === "light" || mode === "dark" ? mode : "auto";
+  try {
+    if (m === "auto") localStorage.removeItem("radius_theme");
+    else localStorage.setItem("radius_theme", m);
+  } catch (e) { /* WebView privat: pilihan tidak persisten, UI tetap berubah */ }
+  if (m === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", m);
   applyTheme();
+  syncThemeControls();
+}
+
+function syncThemeControls() {
+  const mode = themeMode();
+  if (!els.themeSeg) return;
+  for (const btn of els.themeSeg.querySelectorAll("button[data-theme-mode]")) {
+    btn.setAttribute("aria-checked", String(btn.dataset.themeMode === mode));
+  }
+}
+
+// Tombol bulan/matahari di header memutar auto -> terang -> gelap -> auto.
+function toggleTheme() {
+  setThemeMode({ auto: "light", light: "dark", dark: "auto" }[themeMode()]);
 }
 
 prefersDark.addEventListener("change", () => {
@@ -193,6 +233,7 @@ function refreshLanguage() {
   if (state.lastData) renderResult(state.lastData, { refetchDock: false });
   renderCompare();
   renderBeranda();
+  renderTersimpan();
   // dock skor yang sudah tampil ikut bahasa baru
   for (const btn of els.durationGroup.querySelectorAll("button")) {
     const el = btn.querySelector(".d-score");
@@ -528,6 +569,7 @@ function applyView() {
   updateCompareVisibility();
   if (view === "menu") renderBeranda();
   if (view === "banding") { setCompareState("ready"); renderCompare(); }
+  if (view === "tersimpan") renderTersimpan();
   if (MAP_VIEWS.has(view)) {
     // peta diinisialisasi di balik overlay; pastikan ukurannya benar
     setTimeout(() => map.resize(), 60);
@@ -984,6 +1026,96 @@ function renderBeranda() {
   els.recentList.replaceChildren();
   for (const h of hist.slice(0, 5)) els.recentList.appendChild(recentRow(h));
   els.recentEmpty.hidden = hist.length > 0;
+}
+
+/* ---------- Tersimpan & Riwayat (kanvas f8a-f8c) ---------- */
+
+function savedRow(entry) {
+  const row = document.createElement("div");
+  row.className = "saved-row";
+  row.innerHTML = `<button type="button" class="sr-open">
+      <span class="sr-thumb" aria-hidden="true"></span>
+      <span class="sr-body">
+        <span class="sr-name"></span>
+        <span class="sr-sub"></span>
+      </span>
+      <span class="sr-right">
+        <span class="sr-score tnum"></span>
+      </span>
+    </button>
+    <button type="button" class="sr-bm is-on">
+      <svg class="icon" aria-hidden="true"><use href="vendor/icons/sprite.svg#bookmark-fill"></use></svg>
+    </button>`;
+
+  row.querySelector(".sr-name").textContent = entry.label || t("result.captionFallback");
+  // Sub-baris hanya menampilkan yang benar-benar diketahui; tanpa total biaya
+  // tersimpan, jangan mengarang angka rupiah.
+  const parts = [];
+  if (entry.kelurahan) parts.push(entry.kelurahan);
+  parts.push(t("dock.minN", { n: entry.minutes }));
+  if (entry.total) parts.push(t("saved.perMonth", { amount: fmtRp(entry.total) }));
+  row.querySelector(".sr-sub").textContent = parts.join(" · ");
+
+  const score = row.querySelector(".sr-score");
+  score.textContent = String(entry.score ?? "-");
+  score.style.color = cssVal(bandVarFor(entry.score));
+  row.querySelector(".sr-thumb").style.background = cssVal(bandVarFor(entry.score));
+
+  row.querySelector(".sr-open").addEventListener("click", () => openEntry(entry));
+  const bm = row.querySelector(".sr-bm");
+  bm.setAttribute("aria-label", t("save.remove"));
+  bm.setAttribute("title", t("save.remove"));
+  bm.addEventListener("click", () => {
+    Store.removeSaved(entry.id);
+    renderTersimpan();
+    renderBeranda();
+  });
+  return row;
+}
+
+function historyItem(entry, isLast) {
+  const item = document.createElement("div");
+  item.className = "tl-item" + (isToday(entry.at) ? " is-today" : "");
+  item.innerHTML = `<div class="tl-rail">
+      <span class="tl-dot"></span>
+      ${isLast ? "" : '<span class="tl-line"></span>'}
+    </div>
+    <div class="tl-body">
+      <span class="tl-time"></span>
+      <button type="button" class="tl-card">
+        <span class="tc-name"></span>
+        <span class="tc-score tnum"></span>
+      </button>
+    </div>`;
+  item.querySelector(".tl-time").textContent = fmtRelativeTime(entry.at);
+  item.querySelector(".tc-name").textContent = entry.label || t("result.captionFallback");
+  const score = item.querySelector(".tc-score");
+  score.textContent = String(entry.score ?? "-");
+  score.style.color = cssVal(bandVarFor(entry.score));
+  item.querySelector(".tl-card").addEventListener("click", () => openEntry(entry));
+  return item;
+}
+
+function renderTersimpan() {
+  if (!els.savedList) return;
+  const tab = state.savedTab === "history" ? "history" : "saved";
+  for (const btn of els.savedTabs.querySelectorAll("button[data-tab]")) {
+    btn.setAttribute("aria-checked", String(btn.dataset.tab === tab));
+  }
+  els.savedPane.hidden = tab !== "saved";
+  els.historyPane.hidden = tab !== "history";
+
+  const saved = Store.saved();
+  els.savedList.replaceChildren();
+  for (const entry of saved) els.savedList.appendChild(savedRow(entry));
+  els.savedEmpty.hidden = saved.length > 0;
+
+  const hist = Store.history();
+  els.historyList.replaceChildren();
+  hist.forEach((entry, i) =>
+    els.historyList.appendChild(historyItem(entry, i === hist.length - 1))
+  );
+  els.historyEmpty.hidden = hist.length > 0;
 }
 
 /* ---------- dock durasi: skor per durasi ---------- */
@@ -1479,6 +1611,26 @@ els.compareSave.addEventListener("click", () => {
   renderCompare();
 });
 
+els.themeSeg.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-theme-mode]");
+  if (btn) setThemeMode(btn.dataset.themeMode);
+});
+
+els.clearHistory.addEventListener("click", () => {
+  Store.clearHistory();
+  renderTersimpan();
+  renderBeranda();
+  els.clearHistoryDone.hidden = false;
+});
+
+els.savedTabs.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-tab]");
+  if (!btn) return;
+  state.savedTab = btn.dataset.tab;
+  Store.set("savedTab", state.savedTab);
+  renderTersimpan();
+});
+
 els.compareClear.addEventListener("click", () => {
   state.compare = [];
   renderCompare();
@@ -1613,9 +1765,12 @@ if (savedWork && typeof savedWork.lat === "number" && typeof savedWork.lon === "
 }
 syncWorkPicked();
 
+state.savedTab = Store.get("savedTab", "saved") === "history" ? "history" : "saved";
+
 applyI18n();
 applyStaticExtras();
 updateLangPills();
+syncThemeControls();
 applyTheme();
 applyView();
 init();

@@ -1578,3 +1578,102 @@
   gap: 10px;
   padding-bottom: 24px;
 }
+
+/* ---- Tersimpan & Riwayat (kanvas f8a-f8c) ---- */
+
+.saved-tabs { margin-top: 14px; }
+#saved-pane, #history-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.saved-list { display: flex; flex-direction: column; gap: 9px; margin-top: 16px; }
+#history-list { margin-top: 18px; }
+
+.saved-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px;
+  background: var(--card);
+  border-radius: var(--r-card);
+  box-shadow: var(--sh-1);
+  padding: 12px;
+}
+.saved-row .sr-open {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  min-width: 0;
+}
+.saved-row .sr-thumb { width: 46px; height: 46px; border-radius: 12px; opacity: 0.85; }
+.saved-row .sr-body { min-width: 0; }
+.saved-row .sr-name { display: block; font-size: 13.5px; font-weight: 700; }
+.saved-row .sr-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-row .sr-score {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+.saved-row .sr-bm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+}
+.saved-row .sr-bm .icon { width: 14px; height: 14px; }
+
+/* ---- Pengaturan (kanvas f6/f6b) ---- */
+
+.set-group {
+  background: var(--card);
+  border-radius: var(--r-card);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.set-group > .set-row:last-child,
+.set-group > *:last-child { border-bottom: 0; }
+.set-row-stack { display: block; }
+.set-row-stack .segmented-pill { margin-top: 10px; }
+.set-row-btn { border: 0; border-bottom: 1px solid var(--line); background: none; }
+.set-key { font-size: 13.5px; font-weight: 600; }
+.set-key.is-danger, .icon.is-danger { color: var(--bad); }
+.set-sub { margin-top: 3px; font-size: 12px; color: var(--ink-3); }
+.set-done {
+  padding: 0 16px 14px;
+  font-size: 12px;
+  color: var(--good);
+}
+
+.set-foot {
+  margin-top: auto;
+  padding: 24px 0 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.set-version { font-size: 11px; color: var(--ink-4); text-align: center; }
