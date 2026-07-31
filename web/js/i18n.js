@@ -183,6 +183,7 @@ const STRINGS = {
     "cost.why.base": "{trips}x/bulan × {harga}",
     "cost.rowRent": "Sewa",
     "cost.rowExtra": "Estimasi ongkos tambahan",
+    "cost.rowTotal": "Total",
     "cost.totalLabel": "Perkiraan total per bulan",
     "cost.disclaimer": "Ini perkiraan kasar, bukan angka pasti.",
     "cost.disclaimerLong": "Estimasi dari asumsi tarif ojol Zona I (Bandung) dan frekuensi perjalanan yang belum tervalidasi survei. Baca sebagai indikasi, bukan angka pasti.",

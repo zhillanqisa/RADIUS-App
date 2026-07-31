@@ -967,12 +967,25 @@
     background: var(--line);
   }
 
-  /* search mengambang terpisah dari sheet -- inset dari notch/kamera */
+  /* Search mengambang terpisah dari sheet -- inset dari notch/kamera.
+     Di #/peta ia duduk DI ANTARA chevron kembali dan tombol simpan
+     (kanvas f3), jadi sisi kiri-kanannya diberi ruang untuk keduanya. */
   .search-block {
     position: fixed;
     left: 12px; right: 12px;
     top: calc(env(safe-area-inset-top, 0px) + 12px);
     z-index: 950;
+  }
+  body[data-view="peta"] .search-block { left: 64px; right: 64px; }
+
+  /* .map-top HARUS di atas search-block: kalau tidak, tombol simpan tertutup
+     penuh dan tidak bisa ditekan sama sekali. */
+  .map-top { z-index: 960; }
+
+  /* Chip persona duduk DI BAWAH dock durasi (dock berakhir ~155px), di atas
+     sheet (kanvas f3). Kalau lebih tinggi, chip menyelinap di bawah dock. */
+  .persona-row {
+    top: calc(env(safe-area-inset-top, 0px) + 164px);
   }
   .search-field {
     background: var(--card);
