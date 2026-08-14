@@ -3,7 +3,7 @@
    stale-cache). Cache dipakai HANYA sebagai cadangan offline aset shell. */
 "use strict";
 
-const CACHE = "radius-shell-v10";
+const CACHE = "radius-shell-v13";
 
 // Aset shell yang aman di-cache (vendor lokal jarang berubah).
 // CATATAN: css/js kita memakai ?v=<versi> yang SAMA dengan index.html.
@@ -14,17 +14,17 @@ const CACHE = "radius-shell-v10";
 const SHELL = [
   "/",
   "/index.html",
-  "/css/tokens.css?v=10",
-  "/css/base.css?v=10",
-  "/css/components.css?v=10",
-  "/css/app.css?v=10",
-  "/js/i18n.js?v=10",
-  "/js/store.js?v=10",
-  "/js/format.js?v=10",
-  "/js/persona.js?v=10",
-  "/js/cost.js?v=10",
-  "/js/app.js?v=10",
-  "/js/selfcheck.js?v=10",
+  "/css/tokens.css?v=13",
+  "/css/base.css?v=13",
+  "/css/components.css?v=13",
+  "/css/app.css?v=13",
+  "/js/i18n.js?v=13",
+  "/js/store.js?v=13",
+  "/js/format.js?v=13",
+  "/js/persona.js?v=13",
+  "/js/cost.js?v=13",
+  "/js/app.js?v=13",
+  "/js/selfcheck.js?v=13",
   "/vendor/maplibre/maplibre-gl.css",
   "/vendor/maplibre/maplibre-gl.js",
   "/vendor/fonts/outfit-variable.woff2",

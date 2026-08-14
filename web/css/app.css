@@ -987,6 +987,7 @@
   .persona-row {
     top: calc(env(safe-area-inset-top, 0px) + 164px);
   }
+
   .search-field {
     background: var(--card);
     box-shadow: 0 6px 18px rgba(10, 16, 14, 0.14);
@@ -1690,3 +1691,135 @@
   gap: 8px;
 }
 .set-version { font-size: 11px; color: var(--ink-4); text-align: center; }
+
+/* ---- gerak sederhana: transisi layar, ganti tab, umpan balik sentuh ----
+   Semua di sini otomatis mati saat prefers-reduced-motion: reduce, karena
+   base.css sudah menolkan animation-duration & transition-duration global. */
+
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Layar penuh (landing, masuk, beranda, banding, tersimpan, pengaturan).
+   [hidden] = display:none, jadi menghapusnya memutar ulang animasi -- tidak
+   perlu class tambahan atau JS. */
+.screen:not([hidden]) {
+  animation: screenIn 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Ganti tab di Tersimpan & badan perbandingan: cukup pudar naik tipis. */
+@keyframes paneIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+#saved-pane:not([hidden]),
+#history-pane:not([hidden]),
+#compare-body:not([hidden]),
+#compare-loading:not([hidden]),
+#compare-error:not([hidden]) {
+  animation: paneIn 200ms ease both;
+}
+
+/* Baris daftar masuk bertahap. Pakai nth-child, bukan JS: tidak ada state
+   tambahan yang harus dijaga saat daftar dirender ulang. */
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.saved-list > *,
+.recent-list > *,
+#history-list > .tl-item,
+#compare-grid > .compare-col {
+  animation: rowIn 260ms ease both;
+}
+.saved-list > *:nth-child(1),
+.recent-list > *:nth-child(1),
+#history-list > .tl-item:nth-child(1),
+#compare-grid > .compare-col:nth-child(1) { animation-delay: 0ms; }
+.saved-list > *:nth-child(2),
+.recent-list > *:nth-child(2),
+#history-list > .tl-item:nth-child(2),
+#compare-grid > .compare-col:nth-child(2) { animation-delay: 45ms; }
+.saved-list > *:nth-child(3),
+.recent-list > *:nth-child(3),
+#history-list > .tl-item:nth-child(3) { animation-delay: 90ms; }
+.saved-list > *:nth-child(4),
+.recent-list > *:nth-child(4),
+#history-list > .tl-item:nth-child(4) { animation-delay: 135ms; }
+.saved-list > *:nth-child(n+5),
+.recent-list > *:nth-child(n+5),
+#history-list > .tl-item:nth-child(n+5) { animation-delay: 175ms; }
+
+/* Umpan balik sentuh: tekan = mengecil sedikit. Penting di HP, karena tanpa
+   hover tidak ada tanda lain bahwa sentuhan diterima. */
+.dark-btn,
+.lime-btn,
+.ghost-btn,
+.pill-btn,
+.icon-btn,
+.chip,
+.tab,
+.stat-tile,
+.reco-card,
+.recent-row,
+.saved-row .sr-open,
+.saved-row .sr-bm,
+.tl-card,
+.beranda-compare,
+.segmented-pill button,
+.stepper-btns button,
+.compare-clear,
+.work-clear {
+  transition:
+    transform 0.12s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.dark-btn:active,
+.lime-btn:active,
+.ghost-btn:not(:disabled):active,
+.pill-btn:active,
+.icon-btn:active,
+.chip:active,
+.tab:active,
+.reco-card:active,
+.recent-row:active,
+.saved-row .sr-open:active,
+.saved-row .sr-bm:active,
+.tl-card:active,
+.beranda-compare:active,
+.segmented-pill button:active,
+.stepper-btns button:active {
+  transform: scale(0.97);
+}
+
+/* Kartu vonis perbandingan muncul lebih dulu dari kartu lokasinya. */
+#compare-verdict:not([hidden]) {
+  animation: rowIn 300ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Badge persona muncul halus saat persona diganti. */
+#persona-badge:not([hidden]) {
+  animation: rowIn 220ms ease both;
+}
+
+/* Pin peta mendarat, bukan muncul mendadak. */
+@keyframes pinDrop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+.center-pin .cp-pill { animation: pinDrop 280ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+/* Skeleton perbandingan berdenyut supaya terbaca "sedang menunggu", bukan
+   kotak kosong yang macet. */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+.skeleton { animation: skeletonPulse 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .center-pin .cp-pill { animation: none; }
+}
