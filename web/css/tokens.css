@@ -22,8 +22,11 @@
 
   --ink: #1c2116;
   --ink-2: #5c6862;
-  --ink-3: #79847e;
-  --ink-4: #8a948e;
+  /* ink-3 & ink-4 digelapkan dari #79847e / #8a948e: pada 11-13.5px di atas
+     --card mereka hanya mencapai 3.1-4.0:1, di bawah ambang AA 4.5:1 untuk
+     teks kecil. Nilai baru lolos di atas --card maupun --surface. */
+  --ink-3: #66716b;
+  --ink-4: #5f6a64;
 
   --surface: #f3f1e6;      /* cream, latar utama */
   --surface-2: #eef0ec;    /* latar landing / halaman lebih dingin */

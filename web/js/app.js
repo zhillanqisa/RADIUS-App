@@ -72,6 +72,7 @@ const els = {
   sheetHandle: document.getElementById("sheet-handle"),
   swipeTrack: document.getElementById("swipe-track"),
   swipeHint: document.getElementById("swipe-hint"),
+  shell: document.querySelector(".shell"),
   tabbar: document.querySelector(".tabbar"),
   statChecked: document.getElementById("stat-checked"),
   statBest: document.getElementById("stat-best"),
@@ -558,6 +559,15 @@ function applyView() {
   for (const el of document.querySelectorAll("[data-screen]")) {
     el.hidden = el.dataset.screen !== view;
   }
+  // Layar penuh menutupi peta secara visual, tapi peta TIDAK disembunyikan
+  // (MapLibre tidak bisa resize di container display:none). Tanpa penanda,
+  // seluruh isi shell -- kanvas peta, kontrol zoom, pencarian, chip persona,
+  // tombol simpan -- tetap terjangkau Tab dan dibacakan screen reader walau
+  // tertutup. `inert` mencabutnya dari fokus & pohon aksesibilitas.
+  const mapView = MAP_VIEWS.has(view);
+  els.shell.inert = !mapView;
+  els.shell.setAttribute("aria-hidden", String(!mapView));
+
   els.tabbar.hidden = !TABBAR_VIEWS.has(view);
   els.durationDock.hidden = view !== "peta";
   els.analysisView.hidden = view !== "peta";

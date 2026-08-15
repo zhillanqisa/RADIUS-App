@@ -261,8 +261,11 @@
 .brand-sub { margin: 0; color: var(--ink-2); font-size: 12.5px; white-space: nowrap; }
 .panel .brand { gap: 8px; }
 .panel .brand-side { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; }
-.panel .ui-controls .lang-pill { height: 30px; }
-.panel .ui-controls .theme-btn { width: 34px; height: 34px; }
+/* Instance di panel dulu dikecilkan (30/34px) demi kerapatan header. Itu
+   melanggar target sentuh minimum yang ditetapkan spesifikasi sendiri
+   (tombol tema 40x40, pil bahasa tinggi 32). Dikembalikan ke ukuran dasar. */
+.panel .ui-controls .lang-pill { height: 32px; }
+.panel .ui-controls .theme-btn { width: 40px; height: 40px; }
 .brand-side { display: flex; align-items: center; gap: 6px; }
 .brand-city {
   font-size: 11.5px;
